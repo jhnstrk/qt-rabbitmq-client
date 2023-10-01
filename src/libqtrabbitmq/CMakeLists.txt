@@ -6,6 +6,7 @@ include_directories(../include)
 
 set(QMQ_SOURCES_CPP
   qtrabbitmq.cpp
+  frame.cpp
 )
 
 set(QMQ_HEADERS_MOC
@@ -13,6 +14,7 @@ set(QMQ_HEADERS_MOC
 
 set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
+  frame.h
 )
 
 set(QMQ_SOURCES
@@ -33,8 +35,9 @@ target_compile_definitions(qtrabbitmq PRIVATE -DHAVE_CONFIG_H)
 
 set(QMQ_LIBRARIES
   Qt6::Core
+  Qt6::Network
 )
-target_link_libraries(qtrabbitmq PRIVATE ${QMQ_LIBRARIES})
+target_link_libraries(qtrabbitmq ${QMQ_LIBRARIES})
 
 set_target_properties(qtrabbitmq PROPERTIES
   VERSION ${QMQ_VERSION}

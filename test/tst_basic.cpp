@@ -1,26 +1,20 @@
-#include <QObject>
 #include <QDebug>
+#include <QObject>
 #include <QtTest>
 
-class BasicRmqTest: public QObject
+class BasicRmqTest : public QObject
 {
     Q_OBJECT
 
 private:
-    bool myCondition()
-    {
-        return true;
-    }
+    bool myCondition() { return true; }
 
 private slots:
-    void initTestCase()
-    {
-        qDebug("Called before everything else.");
-    }
+    void initTestCase() { qDebug("Called before everything else."); }
 
     void myFirstTest()
     {
-        QVERIFY(true); // check that a condition is satisfied
+        QVERIFY(true);  // check that a condition is satisfied
         QCOMPARE(1, 1); // compare two values
     }
 
@@ -30,10 +24,7 @@ private slots:
         QVERIFY(1 != 2);
     }
 
-    void cleanupTestCase()
-    {
-        qDebug("Called after myFirstTest and mySecondTest.");
-    }
+    void cleanupTestCase() { qDebug("Called after myFirstTest and mySecondTest."); }
 };
 
 QTEST_MAIN(BasicRmqTest)
