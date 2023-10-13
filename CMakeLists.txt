@@ -18,6 +18,13 @@ find_package(Qt6 REQUIRED COMPONENTS Core Network)
 
 include(GNUInstallDirs)
 
+# Compile options
+if(MSVC)
+  add_compile_options(/W4 /WX)
+else()
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
 add_subdirectory(src)
 
 if (BUILD_TESTING)
