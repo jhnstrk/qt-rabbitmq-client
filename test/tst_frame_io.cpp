@@ -68,6 +68,63 @@ private slots:
         QCOMPARE(actual, value);
     }
 
+    void testNativeValues_data() { testValues_data(); }
+
+    void testNativeValues()
+    {
+        const QFETCH(QVariant, value);
+        QBuffer buffer;
+        QVERIFY(buffer.open(QBuffer::ReadWrite));
+        const qmq::FieldValue type = qmq::detail::Frame::metatypeToFieldValue(value.typeId());
+        QVERIFY(qmq::detail::Frame::writeNativeFieldValues(&buffer, {value}, {type}));
+        bool ok;
+        buffer.seek(0);
+        const QVariantList actual = qmq::detail::Frame::readNativeFieldValues(&buffer, {type}, &ok);
+
+        QCOMPARE(actual.size(), 1);
+        QCOMPARE(actual.first().typeId(), value.typeId());
+        QCOMPARE(actual.first(), value);
+    }
+
+    void testNativeValuesBits()
+    {
+    }
+
+    void testNativeValuesList_data()
+    {
+        QTest::addColumn<QVariantList>("values");
+        QTest::addColumn<QList<qmq::FieldValue> >("types");
+        QTest::addColumn<qsizetype>("packedSizeInBytes");
+        for (int numBits=0; numBits<128; ++numBits) {
+            const QVariantList values(numBits, QVariant(true));
+            const QList<qmq::FieldValue> types(numBits, qmq::FieldValue::Bit);
+            const qsizetype packedSizeInBytes = (numBits + 7 )/8;
+            QTest::newRow(QString("%1_bits").arg(numBits).toUtf8().constData()) << values << types << packedSizeInBytes;
+        }
+        QTest::newRow("bits_short_bits_int")
+                << QVariantList({ true, false, 123, false, true, 12323232 } )
+                << QList<qmq::FieldValue>({qmq::FieldValue::Bit, qmq::FieldValue::Bit, qmq::FieldValue::ShortInt,qmq::FieldValue::Bit, qmq::FieldValue::Bit, qmq::FieldValue::LongInt})
+                << qsizetype(8);
+    }
+
+    void testNativeValuesList()
+    {
+        const QFETCH(QVariantList, values);
+        const QFETCH(QList<qmq::FieldValue>, types);
+        const QFETCH(qsizetype, packedSizeInBytes);
+
+        QBuffer buffer;
+        QVERIFY(buffer.open(QBuffer::ReadWrite));
+        QVERIFY(qmq::detail::Frame::writeNativeFieldValues(&buffer, values, types));
+        bool ok;
+        buffer.seek(0);
+        const QVariantList actual = qmq::detail::Frame::readNativeFieldValues(&buffer, types, &ok);
+
+        QCOMPARE(actual.size(), values.size());
+        QCOMPARE(actual, values);
+        QCOMPARE(buffer.size(), packedSizeInBytes);
+    }
+
     void cleanupTestCase()
     {
         // qDebug("Called after myFirstTest and mySecondTest.");

@@ -1,5 +1,6 @@
 #include "frame.h"
 
+#include <QBuffer>
 #include <QDateTime>
 #include <QIODevice>
 #include <QVariant>
@@ -399,7 +400,9 @@ bool writeAmqpVariantFieldTable(QIODevice *io, const QVariant &value)
     return writeAmqpFieldTable(io, value.toHash());
 }
 
-qmq::FieldValue metatypeToFieldValue(int typeId)
+} // namespace
+
+qmq::FieldValue qmq::detail::Frame::metatypeToFieldValue(int typeId)
 {
     switch (typeId) {
     case QMetaType::Type::Bool:
@@ -424,7 +427,7 @@ qmq::FieldValue metatypeToFieldValue(int typeId)
         return qmq::FieldValue::Float;
     case QMetaType::Type::Double:
         return qmq::FieldValue::Double;
-    // case : return qmq::FieldValue::DecimalValue;
+    // Decimal is handled later because the value isn't a compile-time constant
     case QMetaType::Type::QString:
         return qmq::FieldValue::ShortString;
     case QMetaType::Type::QByteArray:
@@ -446,9 +449,11 @@ qmq::FieldValue metatypeToFieldValue(int typeId)
     return qmq::FieldValue::Invalid;
 }
 
-QMetaType::Type fieldValueToMetatype(qmq::FieldValue fieldtype)
+QMetaType::Type qmq::detail::Frame::fieldValueToMetatype(qmq::FieldValue fieldtype)
 {
     switch (fieldtype) {
+    case qmq::FieldValue::Bit:
+        Q_FALLTHROUGH();
     case qmq::FieldValue::Boolean:
         return QMetaType::Type::Bool;
     case qmq::FieldValue::ShortShortInt:
@@ -489,7 +494,6 @@ QMetaType::Type fieldValueToMetatype(qmq::FieldValue fieldtype)
         return QMetaType::Type::UnknownType;
     }
 }
-} // namespace
 
 QVariant qmq::detail::Frame::readFieldValue(QIODevice *io, bool *ok)
 {
@@ -500,6 +504,11 @@ QVariant qmq::detail::Frame::readFieldValue(QIODevice *io, bool *ok)
             *ok = false;
         return QVariant();
     }
+    return readNativeFieldValue(io, type, ok);
+}
+
+QVariant qmq::detail::Frame::readNativeFieldValue(QIODevice *io, FieldValue type, bool *ok)
+{
     switch (type) {
     case FieldValue::Boolean:
         return readAmqpVariantBool(io, ok);
@@ -532,6 +541,7 @@ QVariant qmq::detail::Frame::readFieldValue(QIODevice *io, bool *ok)
     case FieldValue::FieldArray:
         return readAmqpVariantFieldArray(io, ok);
     case FieldValue::Timestamp: {
+        bool isOk = false;
         const qint64 v = readAmqp<qint64>(io, &isOk);
         if (ok)
             *ok = isOk;
@@ -553,6 +563,39 @@ QVariant qmq::detail::Frame::readFieldValue(QIODevice *io, bool *ok)
     }
 }
 
+QVariantList qmq::detail::Frame::readNativeFieldValues(QIODevice *io,
+                                                       const QList<FieldValue> &types,
+                                                       bool *ok)
+{
+    bool isOk = true;
+    int bitPos = 0;
+    QVariantList ret;
+    ret.reserve(types.size());
+    for (qsizetype i = 0; i < types.size(); ++i) {
+        const FieldValue &type = types.at(i);
+        if (type == FieldValue::Bit) {
+            ++bitPos;
+        }
+        if ((type != FieldValue::Bit) || (i == types.size() - 1)) {
+            while (bitPos > 0) {
+                const quint8 byte = readAmqp<quint8>(io, &isOk);
+                const int numBitsRead = std::min(bitPos, 8);
+                for (int ibit = 0; ibit < numBitsRead; ++ibit) {
+                    const bool isSet = (((1 << ibit) & byte) != 0);
+                    ret.push_back(QVariant::fromValue(isSet));
+                }
+                bitPos -= numBitsRead;
+            }
+        }
+        if (type != FieldValue::Bit) {
+            ret.push_back(readNativeFieldValue(io, type, &isOk));
+        }
+    }
+    if (ok)
+        *ok = isOk;
+    return ret;
+}
+
 bool qmq::detail::Frame::writeFieldValue(QIODevice *io, const QVariant &value)
 {
     const FieldValue valueType = metatypeToFieldValue(value.typeId());
@@ -565,6 +608,13 @@ bool qmq::detail::Frame::writeFieldValue(QIODevice *io, const QVariant &value, F
     if (!ok)
         return false;
 
+    return writeNativeFieldValue(io, value, valueType);
+}
+
+bool qmq::detail::Frame::writeNativeFieldValue(QIODevice *io,
+                                               const QVariant &value,
+                                               FieldValue valueType)
+{
     switch (valueType) {
     case FieldValue::Boolean:
         return writeAmqpBool(io, value.toBool());
@@ -607,4 +657,156 @@ bool qmq::detail::Frame::writeFieldValue(QIODevice *io, const QVariant &value, F
         qWarning() << "Unknown field type";
         return false;
     }
+}
+
+bool qmq::detail::Frame::writeNativeFieldValues(QIODevice *io,
+                                                const QVariantList &values,
+                                                const QList<FieldValue> &types)
+{
+    bool ok = true;
+    int bitPos = 0;
+    quint8 bitBuffer = 0;
+    for (qsizetype i = 0; i < types.size(); ++i) {
+        const FieldValue &type = types.at(i);
+        const QVariant &value = values.at(i);
+        if (type == FieldValue::Bit) {
+            if (!value.canConvert<bool>()) {
+                qWarning() << "Failed conversion to bool";
+                return false;
+            }
+            const bool isSet = value.value<bool>();
+            if (isSet) {
+                bitBuffer |= (1 << bitPos);
+            }
+            ++bitPos;
+        }
+        if ((bitPos == 8)
+            || (bitPos > 0 && ((type != FieldValue::Bit) || (i == types.size() - 1)))) {
+            ok = writeAmqp<quint8>(io, bitBuffer);
+            if (!ok)
+                return false;
+            bitBuffer = 0;
+            bitPos = 0;
+        }
+        if (type != FieldValue::Bit) {
+            ok = writeNativeFieldValue(io, value, type);
+        }
+        if (!ok)
+            return false;
+    }
+    return ok;
+}
+
+qmq::detail::Frame *qmq::detail::Frame::readFrame(QIODevice *io,
+                                                  quint32 maxFrameSize,
+                                                  ErrorCode *err)
+{
+    if (io->bytesAvailable() < (FrameHeaderSize + 1)) {
+        *err = ErrorCode::InsufficientDataAvailable;
+        return nullptr;
+    }
+
+    const int headerLen = FrameHeaderSize;
+    char header[headerLen];
+    if (io->peek(header, headerLen) != headerLen) {
+        qWarning() << "peek failed";
+        return nullptr;
+    }
+    const FrameType t = static_cast<FrameType>(header[0]);
+    const quint16 channel = qFromBigEndian<quint16>(header + 1);
+    const quint32 size = qFromBigEndian<quint32>(header + 3);
+
+    if (maxFrameSize != 0 && size > maxFrameSize) {
+        *err = ErrorCode::FrameTooLarge;
+        return nullptr;
+    }
+    if (io->bytesAvailable() < (size + FrameHeaderSize + 1)) {
+        *err = ErrorCode::InsufficientDataAvailable;
+        return nullptr;
+    }
+
+    io->skip(FrameHeaderSize);
+
+    const QByteArray content = io->read((size));
+    if (content.size() != (size)) {
+        *err = ErrorCode::IoError;
+        return nullptr;
+    }
+
+    bool ok;
+    const quint8 endByte = readAmqp<quint8>(io, &ok);
+    if (!ok || endByte != FrameEndChar) {
+        *err = ErrorCode::InvalidFrameData;
+        return nullptr;
+    }
+    switch (t) {
+    case qmq::FrameType::Method:
+        return MethodFrame::fromContent(channel, content);
+    case qmq::FrameType::Header:
+        return HeaderFrame::fromContent(channel, content);
+    case qmq::FrameType::Body:
+        return BodyFrame::fromContent(channel, content);
+    case qmq::FrameType::Heartbeat:
+        return HeartbeatFrame::fromContent(channel, content);
+    default:
+        *err = ErrorCode::UnknownFrameType;
+        return nullptr;
+    }
+}
+
+qmq::detail::BodyFrame *qmq::detail::BodyFrame::fromContent(quint16 channel,
+                                                            const QByteArray &content)
+{
+    return new BodyFrame(channel, content);
+}
+qmq::detail::MethodFrame *qmq::detail::MethodFrame::fromContent(quint16 channel,
+                                                                const QByteArray &content)
+{
+    QBuffer io;
+    io.setData(content);
+    bool ok = io.open(QIODevice::ReadOnly);
+    quint16 classId = readAmqp<quint16>(&io, &ok);
+    quint16 methodId = readAmqp<quint16>(&io, &ok);
+    const QByteArray arguments = content.mid(4);
+    return new MethodFrame(channel, classId, methodId, arguments);
+}
+QByteArray qmq::detail::MethodFrame::content() const
+{
+    return QByteArray();
+}
+
+QVariantList qmq::detail::MethodFrame::getArguments(const QList<FieldValue> &types) const
+{
+    QBuffer io;
+    io.setData(this->m_arguments);
+    bool ok = io.open(QIODevice::ReadOnly);
+    return Frame::readNativeFieldValues(&io, types, &ok);
+}
+
+bool qmq::detail::MethodFrame::setArguments(const QVariantList &values,
+                                            const QList<FieldValue> &types)
+{
+    if (values.size() != types.size()) {
+        qCritical() << "Size of values does not match types";
+        return false;
+    }
+    QBuffer io;
+    bool ok = io.open(QIODevice::WriteOnly);
+    if (!ok)
+        return false;
+    ok = Frame::writeNativeFieldValues(&io, values, types);
+    io.close();
+    this->m_arguments = io.buffer();
+    return ok;
+}
+
+qmq::detail::HeaderFrame *qmq::detail::HeaderFrame::fromContent(quint16 channel,
+                                                                const QByteArray &content)
+{
+    return new HeaderFrame(channel);
+}
+qmq::detail::HeartbeatFrame *qmq::detail::HeartbeatFrame::fromContent(quint16 channel,
+                                                                      const QByteArray &content)
+{
+    return new HeartbeatFrame();
 }

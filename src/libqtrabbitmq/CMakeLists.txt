@@ -6,6 +6,7 @@ include_directories(../include)
 
 set(QMQ_SOURCES_CPP
   qtrabbitmq.cpp
+  decimal.cpp
   frame.cpp
 )
 
@@ -15,6 +16,7 @@ set(QMQ_HEADERS_MOC
 set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
   frame.h
+  spec_constants.h
 )
 
 set(QMQ_SOURCES

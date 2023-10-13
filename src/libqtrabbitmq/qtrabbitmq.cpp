@@ -1,5 +1,6 @@
 #include <qtrabbitmq/qtrabbitmq.h>
 
+#include <QSslError>
 #include <QSslSocket>
 #include <QUrl>
 
@@ -103,17 +104,17 @@ void Client::onSocketReadyRead()
 #warning(TODO)
 }
 
-void Client::onSocketSslErrors()
+void Client::onSocketSslErrors(const QList<QSslError> &errors)
 {
 #warning(TODO)
 }
 
-void Client::onSocketStateChanged()
+void Client::onSocketStateChanged(QAbstractSocket::SocketState state)
 {
 #warning(TODO)
 }
 
-void Client::onSocketErrorOccurred()
+void Client::onSocketErrorOccurred(QAbstractSocket::SocketError error)
 {
 #warning(TODO)
 }
