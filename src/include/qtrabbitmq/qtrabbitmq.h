@@ -17,6 +17,7 @@ struct Decimal
     {}
 
     QString toString() const;
+    double toDouble() const;
     quint8 scale = 0;
     qint32 value = 0;
 };
@@ -24,8 +25,12 @@ struct Decimal
 size_t qHash(const Decimal &key, size_t seed);
 inline bool operator==(const Decimal &lhs, const Decimal &rhs)
 {
+    // Exact quality, not numeric equality since zero isn't handled.
     return lhs.scale == rhs.scale && lhs.value == rhs.value;
 }
+
+//! Register type conversion functions with QMetaType
+void registerDecimalConverters();
 
 enum class FieldValue : char {
     Boolean = 't',
@@ -46,7 +51,7 @@ enum class FieldValue : char {
     Timestamp = 'T',
     FieldTable = 'F',
     Void = 'V',
-    Bit = 'x',
+    Bit = 1, // Native type
     Invalid = 0
 };
 
@@ -55,12 +60,15 @@ enum class FrameType { Method = 1, Header = 2, Body = 3, Heartbeat = 4, Invalid 
 class Client : public QObject
 {
     Q_OBJECT
-
+public:
     Client(QObject *parent = nullptr);
     ~Client();
 
     QUrl connectionUrl() const;
     void connectToHost(const QUrl &url);
+
+Q_SIGNALS:
+    void connected();
 
 protected Q_SLOTS:
     void onSocketConnected();

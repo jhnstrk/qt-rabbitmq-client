@@ -8,10 +8,9 @@ set(CMAKE_AUTOMOC ON)
 
 enable_testing(true)
 
-qt_add_executable(tst_basic tst_basic.cpp)
-add_test(NAME tst_basic COMMAND tst_basic)
-target_link_libraries(tst_basic PRIVATE Qt::Test qtrabbitmq)
-
-qt_add_executable(tst_frame_io tst_frame_io.cpp)
-add_test(NAME tst_frame_io COMMAND tst_frame_io)
-target_link_libraries(tst_frame_io PRIVATE Qt::Test qtrabbitmq)
+set(test_items basic;frame_io;connect)
+foreach(item IN LISTS test_items)
+  qt_add_executable(tst_${item} tst_${item}.cpp)
+  add_test(NAME tst_${item} COMMAND tst_${item})
+  target_link_libraries(tst_${item} PRIVATE Qt::Test qtrabbitmq)
+endforeach()

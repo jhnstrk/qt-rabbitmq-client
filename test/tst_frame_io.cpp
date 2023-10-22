@@ -86,25 +86,29 @@ private slots:
         QCOMPARE(actual.first(), value);
     }
 
-    void testNativeValuesBits()
-    {
-    }
+    void testNativeValuesBits() {}
 
     void testNativeValuesList_data()
     {
         QTest::addColumn<QVariantList>("values");
-        QTest::addColumn<QList<qmq::FieldValue> >("types");
+        QTest::addColumn<QList<qmq::FieldValue>>("types");
         QTest::addColumn<qsizetype>("packedSizeInBytes");
-        for (int numBits=0; numBits<128; ++numBits) {
+        for (int numBits = 0; numBits < 128; ++numBits) {
             const QVariantList values(numBits, QVariant(true));
             const QList<qmq::FieldValue> types(numBits, qmq::FieldValue::Bit);
-            const qsizetype packedSizeInBytes = (numBits + 7 )/8;
-            QTest::newRow(QString("%1_bits").arg(numBits).toUtf8().constData()) << values << types << packedSizeInBytes;
+            const qsizetype packedSizeInBytes = (numBits + 7) / 8;
+            QTest::newRow(QString("%1_bits").arg(numBits).toUtf8().constData())
+                << values << types << packedSizeInBytes;
         }
         QTest::newRow("bits_short_bits_int")
-                << QVariantList({ true, false, 123, false, true, 12323232 } )
-                << QList<qmq::FieldValue>({qmq::FieldValue::Bit, qmq::FieldValue::Bit, qmq::FieldValue::ShortInt,qmq::FieldValue::Bit, qmq::FieldValue::Bit, qmq::FieldValue::LongInt})
-                << qsizetype(8);
+            << QVariantList({true, false, 123, false, true, 12323232})
+            << QList<qmq::FieldValue>({qmq::FieldValue::Bit,
+                                       qmq::FieldValue::Bit,
+                                       qmq::FieldValue::ShortInt,
+                                       qmq::FieldValue::Bit,
+                                       qmq::FieldValue::Bit,
+                                       qmq::FieldValue::LongInt})
+            << qsizetype(8);
     }
 
     void testNativeValuesList()

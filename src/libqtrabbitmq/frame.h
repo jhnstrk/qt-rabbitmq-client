@@ -54,7 +54,7 @@ protected:
 private:
     qmq::FrameType m_type;
     quint16 m_channel;
-    static const int FrameHeaderSize = 1;
+    static const int FrameHeaderSize = 7;
     static const quint8 FrameEndChar = 0xCE;
 };
 

@@ -8,6 +8,7 @@ set(QMQ_SOURCES_CPP
   qtrabbitmq.cpp
   decimal.cpp
   frame.cpp
+  frame_handlers.cpp
 )
 
 set(QMQ_HEADERS_MOC
@@ -17,6 +18,7 @@ set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
   frame.h
   spec_constants.h
+  frame_handlers.h
 )
 
 set(QMQ_SOURCES

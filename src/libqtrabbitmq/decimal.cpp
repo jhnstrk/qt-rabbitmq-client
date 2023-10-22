@@ -3,6 +3,7 @@
 #include <QDataStream>
 #include <QDebug>
 #include <QHash>
+#include <QMetaType>
 
 namespace qmq {
 
@@ -32,9 +33,20 @@ QString Decimal::toString() const
     return QString::fromLatin1(n);
 }
 
+double Decimal::toDouble() const
+{
+    return double(this->value) * std::pow(10., -double(this->scale));
+}
+
 size_t qHash(const Decimal &key, size_t seed)
 {
     return ::qHash(key.scale, seed) ^ ::qHash(key.value, seed);
+}
+
+void registerDecimalConverters()
+{
+    QMetaType::registerConverter<qmq::Decimal, double>(&qmq::Decimal::toDouble);
+    QMetaType::registerConverter<qmq::Decimal, QString>(&qmq::Decimal::toString);
 }
 
 } // namespace qmq

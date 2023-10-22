@@ -285,10 +285,21 @@ QVariantList readAmqpVariantFieldArray(QIODevice *io, bool *ok)
             *ok = false;
         return QVariantList();
     }
+    QByteArray packedData = io->read(len);
+    if (packedData.size() != len) {
+        if (ok)
+            *ok = false;
+        qWarning() << "Attempt to allocate failed" << len;
+        return QVariantList();
+    }
+    QBuffer packedIo(&packedData);
+    if (!packedIo.open(QIODevice::ReadOnly)) {
+        qWarning() << "Attempt to open buffer failed";
+        return QVariantList();
+    }
     QVariantList items;
-    items.reserve(len);
-    for (qsizetype i = 0; i < len; ++i) {
-        const QVariant nextItem = qmq::detail::Frame::readFieldValue(io, &isOk);
+    while (!packedIo.atEnd()) {
+        const QVariant nextItem = qmq::detail::Frame::readFieldValue(&packedIo, &isOk);
         if (!isOk) {
             if (ok)
                 *ok = false;
@@ -301,19 +312,28 @@ QVariantList readAmqpVariantFieldArray(QIODevice *io, bool *ok)
 
 bool writeAmqpFieldArray(QIODevice *io, const QVariantList &value)
 {
-    const quint32 len = value.length();
-    if (len != value.length()) {
-        qWarning() << "Value too long";
-        return false;
+    QByteArray packedBuffer;
+    {
+        QBuffer packedIo(&packedBuffer);
+        if (!packedIo.open(QIODevice::WriteOnly)) {
+            qWarning() << "Failed to open";
+            return false;
+        }
+
+        for (const QVariant &item : value) {
+            bool ok = qmq::detail::Frame::writeFieldValue(&packedIo, item);
+            if (!ok)
+                return false;
+        }
     }
+    const quint32 len = packedBuffer.size();
     bool ok = writeAmqp<quint32>(io, len);
     if (!ok)
         return false;
-    for (const QVariant &item : value) {
-        ok = qmq::detail::Frame::writeFieldValue(io, item);
-        if (!ok)
-            return false;
+    if (!io->write(packedBuffer)) {
+        return false;
     }
+
     return true;
 }
 
@@ -350,16 +370,27 @@ QVariantHash readAmqpVariantFieldTable(QIODevice *io, bool *ok)
             *ok = false;
         return QVariantHash();
     }
+    QByteArray packedData = io->read(len);
+    if (packedData.size() != len) {
+        if (ok)
+            *ok = false;
+        qWarning() << "Attempt to allocate failed" << len;
+        return QVariantHash();
+    }
+    QBuffer packedIo(&packedData);
+    if (!packedIo.open(QIODevice::ReadOnly)) {
+        qWarning() << "Attempt to open buffer failed";
+        return QVariantHash();
+    }
     QVariantHash items;
-    items.reserve(len);
-    for (qsizetype i = 0; i < len; ++i) {
-        const QByteArray name = readAmqpShortString(io, &isOk);
+    while (!packedIo.atEnd()) {
+        const QByteArray name = readAmqpShortString(&packedIo, &isOk);
         if (!isOk) {
             if (ok)
                 *ok = false;
             return items;
         }
-        const QVariant nextItem = qmq::detail::Frame::readFieldValue(io, &isOk);
+        const QVariant nextItem = qmq::detail::Frame::readFieldValue(&packedIo, &isOk);
         if (!isOk) {
             if (ok)
                 *ok = false;
@@ -372,21 +403,30 @@ QVariantHash readAmqpVariantFieldTable(QIODevice *io, bool *ok)
 
 bool writeAmqpFieldTable(QIODevice *io, const QVariantHash &value)
 {
-    const quint32 len = value.size();
-    if (len != value.size()) {
-        qWarning() << "Value too long";
-        return false;
+    QByteArray packedBuffer;
+    {
+        QBuffer packedIo(&packedBuffer);
+        if (!packedIo.open(QIODevice::WriteOnly)) {
+            qWarning() << "Failed to open";
+            return false;
+        }
+
+        for (auto it = value.constKeyValueBegin(); it != value.constKeyValueEnd(); ++it) {
+            bool ok = writeAmqpShortString(&packedIo, it->first);
+            if (!ok)
+                return false;
+            ok = qmq::detail::Frame::writeFieldValue(&packedIo, it->second);
+            if (!ok)
+                return false;
+        }
     }
+    const quint32 len = packedBuffer.size();
     bool ok = writeAmqp<quint32>(io, len);
     if (!ok)
         return false;
-    for (auto it = value.constKeyValueBegin(); it != value.constKeyValueEnd(); ++it) {
-        ok = writeAmqpShortString(io, it->first);
-        if (!ok)
-            return false;
-        ok = qmq::detail::Frame::writeFieldValue(io, it->second);
-        if (!ok)
-            return false;
+
+    if (io->write(packedBuffer) != packedBuffer.size()) {
+        return false;
     }
     return true;
 }
@@ -558,7 +598,8 @@ QVariant qmq::detail::Frame::readNativeFieldValue(QIODevice *io, FieldValue type
         return QVariant(QMetaType(QMetaType::Type::Void));
         break;
     default:
-        qWarning() << "Unknown field type";
+        qWarning() << "Unknown field type" << (int) type;
+        ;
         return QVariant();
     }
 }
@@ -654,7 +695,7 @@ bool qmq::detail::Frame::writeNativeFieldValue(QIODevice *io,
         return true;
         break;
     default:
-        qWarning() << "Unknown field type";
+        qWarning() << "Unknown field type" << (int) valueType;
         return false;
     }
 }
@@ -721,6 +762,7 @@ qmq::detail::Frame *qmq::detail::Frame::readFrame(QIODevice *io,
         return nullptr;
     }
     if (io->bytesAvailable() < (size + FrameHeaderSize + 1)) {
+        qDebug() << "InsufficientDataAvailable" << io->bytesAvailable() << size << FrameHeaderSize;
         *err = ErrorCode::InsufficientDataAvailable;
         return nullptr;
     }
