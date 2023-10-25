@@ -40,6 +40,7 @@ public:
 
     //! maxFrameSize of 0 is treated as unlimited.
     static Frame *readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
+    static bool writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *f);
 
     //! Note that bit type isn't handled here.
     static qmq::FieldValue metatypeToFieldValue(int typeId);
@@ -71,13 +72,22 @@ public:
     QVariantList getArguments(const QList<FieldValue> &types) const;
     bool setArguments(const QVariantList &values, const QList<FieldValue> &types);
 
-private:
+    MethodFrame(quint16 channel, quint16 classId, quint16 methodId)
+        : Frame(qmq::FrameType::Method, channel)
+        , m_classId(classId)
+        , m_methodId(methodId)
+        , m_arguments()
+    {}
+
+protected:
     MethodFrame(quint16 channel, quint16 classId, quint16 methodId, const QByteArray &arguments)
         : Frame(qmq::FrameType::Method, channel)
         , m_classId(classId)
         , m_methodId(methodId)
         , m_arguments(arguments)
     {}
+
+private:
     quint16 m_classId = 0;
     quint16 m_methodId = 0;
     QByteArray m_arguments;

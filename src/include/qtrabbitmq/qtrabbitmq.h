@@ -9,6 +9,10 @@ class QUrl;
 
 namespace qmq {
 
+namespace detail {
+class Frame;
+}
+
 struct Decimal
 {
     explicit Decimal(quint8 s = 0, qint32 v = 0)
@@ -69,6 +73,9 @@ public:
 
 Q_SIGNALS:
     void connected();
+
+public Q_SLOTS:
+    bool sendFrame(detail::Frame *f);
 
 protected Q_SLOTS:
     void onSocketConnected();

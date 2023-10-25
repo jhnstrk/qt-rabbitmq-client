@@ -796,6 +796,28 @@ qmq::detail::Frame *qmq::detail::Frame::readFrame(QIODevice *io,
     }
 }
 
+bool qmq::detail::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *f)
+{
+    qDebug() << "Write frame" << f->channel() << (int) f->type();
+    const QByteArray content = f->content();
+
+    const quint8 t = static_cast<quint8>(f->type());
+    const quint16 channel = f->channel();
+    const quint32 size = content.size();
+
+    if (maxFrameSize != 0 && (content.size() + FrameHeaderSize + 1) > maxFrameSize) {
+        qWarning() << "Cannot write frame: too large.";
+        return false;
+    }
+    bool ok = writeAmqp<quint8>(io, t);
+    ok = ok && writeAmqp<quint16>(io, channel);
+    ok = ok && writeAmqp<quint32>(io, size);
+    ok = ok && (io->write(content) == content.size());
+    ok = ok && writeAmqp<quint8>(io, FrameEndChar);
+    qDebug() << "Write frame" << ok << size;
+    return ok;
+}
+
 qmq::detail::BodyFrame *qmq::detail::BodyFrame::fromContent(quint16 channel,
                                                             const QByteArray &content)
 {
@@ -807,14 +829,25 @@ qmq::detail::MethodFrame *qmq::detail::MethodFrame::fromContent(quint16 channel,
     QBuffer io;
     io.setData(content);
     bool ok = io.open(QIODevice::ReadOnly);
-    quint16 classId = readAmqp<quint16>(&io, &ok);
-    quint16 methodId = readAmqp<quint16>(&io, &ok);
+    const quint16 classId = readAmqp<quint16>(&io, &ok);
+    const quint16 methodId = readAmqp<quint16>(&io, &ok);
     const QByteArray arguments = content.mid(4);
     return new MethodFrame(channel, classId, methodId, arguments);
 }
+
 QByteArray qmq::detail::MethodFrame::content() const
 {
-    return QByteArray();
+    qDebug() << "Get method content";
+    QBuffer io;
+    bool ok = io.open(QIODevice::WriteOnly);
+    ok = ok && writeAmqp<quint16>(&io, this->classId());
+    ok = ok && writeAmqp<quint16>(&io, this->methodId());
+    ok = ok && (io.write(this->m_arguments) == this->m_arguments.size());
+    if (!ok) {
+        qWarning() << "Failed writing frame content";
+    }
+    io.close();
+    return io.data();
 }
 
 QVariantList qmq::detail::MethodFrame::getArguments(const QList<FieldValue> &types) const

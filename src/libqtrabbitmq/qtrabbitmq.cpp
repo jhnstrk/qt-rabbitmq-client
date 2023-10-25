@@ -17,10 +17,6 @@ QByteArray protocolHeader()
 {
     return QByteArrayLiteral("AMQP\x00\x00\x09\x01");
 }
-QByteArray frameEnd()
-{
-    return QByteArrayLiteral("\xCE");
-}
 } // namespace
 
 namespace qmq {
@@ -92,6 +88,12 @@ void Client::connectToHost(const QUrl &url)
     } else {
         d->socket->connectToHost(url.host(), port);
     }
+}
+
+bool Client::sendFrame(detail::Frame *f)
+{
+    const quint32 maxFrameSize = 64 * 1024; // todo
+    return detail::Frame::writeFrame(d->socket, maxFrameSize, f);
 }
 
 void Client::onSocketConnected()
