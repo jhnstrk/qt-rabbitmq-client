@@ -10,6 +10,7 @@ set(QMQ_SOURCES_CPP
   decimal.cpp
   frame.cpp
   frame_handlers.cpp
+  spec_constants.cpp
 )
 
 set(QMQ_HEADERS_MOC

@@ -37,14 +37,6 @@ constexpr const quint16 ID_ = 10, Start = 10, StartOk = 11, Secure = 20, SecureO
                         TuneOk = 31, Open = 40, OpenOk = 41, Close = 50, CloseOk = 51, Blocked = 60,
                         Unblocked = 61;
 
-namespace Types {
-using namespace Domain;
-constexpr const auto Start = {Octet, Octet, PeerProperties, LongStr, LongStr};
-constexpr const auto StartOk = {PeerProperties, ShortStr, LongStr, ShortStr};
-constexpr const auto Tune = {Short, Long, Short};
-constexpr const auto TuneOk = {Short, Long, Short};
-} // namespace Types
-
 } // namespace Connection
 
 namespace Channel {
@@ -52,68 +44,30 @@ constexpr const quint16 ID_ = 20, Open = 10, OpenOk = 11, Flow = 20, FlowOk = 21
                         CloseOk = 41;
 }
 
-enum class Exchange {
-    ID_ = 40,
-    Declare = 10,
-    DeclareOk = 11,
-    Delete = 20,
-    DeleteOk = 21,
-    Bind = 30,
-    BindOk = 31,
-    Unbind = 40,
-    UnbindOk = 51,
+namespace Exchange {
+constexpr const quint16 ID_ = 40, Declare = 10, DeclareOk = 11, Delete = 20, DeleteOk = 21,
+                        Bind = 30, BindOk = 31, Unbind = 40, UnbindOk = 51;
 };
 
-enum class Queue {
-    ID_ = 50,
-    Declare = 10,
-    DeclareOk = 11,
-    Bind = 20,
-    BindOk = 21,
-    Purge = 30,
-    PurgeOk = 31,
-    Delete = 40,
-    DeleteOk = 41,
-    Unbind = 50,
-    UnbindOk = 51,
+namespace Queue {
+constexpr const quint16 ID_ = 50, Declare = 10, DeclareOk = 11, Bind = 20, BindOk = 21, Purge = 30,
+                        PurgeOk = 31, Delete = 40, DeleteOk = 41, Unbind = 50, UnbindOk = 51;
 };
 
-enum class Basic {
-    ID_ = 60,
-    Qos = 10,
-    QosOk = 11,
-    Consume = 20,
-    ConsumeOk = 21,
-    Cancel = 30,
-    CancelOk = 31,
-    Publish = 40,
-    Return = 50,
-    Deliver = 60,
-    Get = 70,
-    GetOk = 71,
-    GetEmpty = 72,
-    Ack = 80,
-    Nack = 120,
-    Reject = 90,
-    RecoverAsync = 100,
-    Recover = 110,
-    RecoverOk = 111,
+namespace Basic {
+constexpr const quint16 ID_ = 60, Qos = 10, QosOk = 11, Consume = 20, ConsumeOk = 21, Cancel = 30,
+                        CancelOk = 31, Publish = 40, Return = 50, Deliver = 60, Get = 70,
+                        GetOk = 71, GetEmpty = 72, Ack = 80, Nack = 120, Reject = 90,
+                        RecoverAsync = 100, Recover = 110, RecoverOk = 111;
 };
 
-enum class Confirm {
-    ID_ = 85,
-    Select = 10,
-    SelectOk = 11,
+namespace Confirm {
+constexpr const quint16 ID_ = 85, Select = 10, SelectOk = 11;
 };
 
-enum class Tx {
-    ID_ = 90,
-    Select = 10,
-    SelectOk = 11,
-    Commit = 20,
-    CommitOk = 21,
-    Rollback = 30,
-    RollbackOk = 31,
+namespace Tx {
+constexpr const quint16 ID_ = 90, Select = 10, SelectOk = 11, Commit = 20, CommitOk = 21,
+                        Rollback = 30, RollbackOk = 31;
 };
 
 namespace Constants {
@@ -142,6 +96,8 @@ static constexpr const int NotAllowed = 530;
 static constexpr const int NotImplemented = 540;
 static constexpr const int InternalError = 541;
 }; // namespace Constants
+
+QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId);
 
 } // namespace qmq
 

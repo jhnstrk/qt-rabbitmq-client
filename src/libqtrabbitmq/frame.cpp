@@ -850,12 +850,12 @@ QByteArray qmq::detail::MethodFrame::content() const
     return io.data();
 }
 
-QVariantList qmq::detail::MethodFrame::getArguments(const QList<FieldValue> &types) const
+QVariantList qmq::detail::MethodFrame::getArguments(const QList<FieldValue> &types, bool *ok) const
 {
     QBuffer io;
     io.setData(this->m_arguments);
-    bool ok = io.open(QIODevice::ReadOnly);
-    return Frame::readNativeFieldValues(&io, types, &ok);
+    bool isOk = io.open(QIODevice::ReadOnly);
+    return Frame::readNativeFieldValues(&io, types, ok);
 }
 
 bool qmq::detail::MethodFrame::setArguments(const QVariantList &values,

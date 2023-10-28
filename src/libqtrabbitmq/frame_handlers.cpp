@@ -28,8 +28,10 @@ bool ConnectionHandler::handleFrame(const MethodFrame *frame)
 bool ConnectionHandler::onStart(const MethodFrame *frame)
 {
     qDebug() << "Frane content" << frame->content();
-    const QVariantList args = frame->getArguments(Connection::Types::Start);
-    if (args.isEmpty()) {
+    bool ok;
+    const QVariantList args = frame->getArguments(methodArgs(frame->classId(), frame->methodId()),
+                                                  &ok);
+    if (!ok) {
         qWarning() << "Failed to parse args";
         return false;
     }
@@ -53,21 +55,22 @@ bool ConnectionHandler::sendStartOk()
     qDebug() << "Create Method frame" << response;
     MethodFrame frame(0, Connection::ID_, Connection::StartOk);
     qDebug() << "Set method frame args" << args;
-    frame.setArguments(args, Connection::Types::StartOk);
+    frame.setArguments(args, methodArgs(Connection::ID_, Connection::StartOk));
     return m_client->sendFrame(&frame);
 }
 
 bool ConnectionHandler::onTune(const MethodFrame *frame)
 {
     qDebug() << "Frane content" << frame->content();
-    const QVariantList args = frame->getArguments(Connection::Types::Tune);
-    if (args.isEmpty()) {
+    bool ok;
+    const QVariantList args = frame->getArguments(methodArgs(frame->classId(), frame->methodId()),
+                                                  &ok);
+    if (!ok) {
         qWarning() << "Failed to parse args";
         return false;
     }
     qDebug() << "Tune" << args;
 
-    bool ok;
     this->m_channelMax = args.at(0).toInt(&ok);
     this->m_frameMaxSizeBytes = args.at(1).toLongLong(&ok);
     this->m_heartbeatSeconds = args.at(2).toInt(&ok);
@@ -80,7 +83,7 @@ bool ConnectionHandler::sendTuneOk()
     QVariantList args({this->m_channelMax, this->m_frameMaxSizeBytes, this->m_heartbeatSeconds});
     MethodFrame frame(0, Connection::ID_, Connection::TuneOk);
     qDebug() << "Set method frame args" << args;
-    frame.setArguments(args, Connection::Types::TuneOk);
+    frame.setArguments(args, methodArgs(Connection::ID_, Connection::TuneOk));
     return m_client->sendFrame(&frame);
 }
 
