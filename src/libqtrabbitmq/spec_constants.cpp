@@ -23,9 +23,9 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         case TuneOk:
             return {Short, Long, Short};
         case Open:
-            return {Path};
+            return {Path, ShortStr, Bit};
         case OpenOk:
-            return {};
+            return {ShortStr};
         case Close:
             return {ReplyCode, ReplyText, ClassId, MethodId};
         case CloseOk:
@@ -38,9 +38,9 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         switch (methodId) {
             using namespace Channel;
         case Open:
-            return {};
+            return {ShortStr};
         case OpenOk:
-            return {};
+            return {LongStr};
         case Flow:
             return {Bit};
         case FlowOk:
@@ -57,11 +57,11 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         switch (methodId) {
             using namespace Exchange;
         case Declare:
-            return {ExchangeName, ShortStr, Bit, Bit, NoWait, Table};
+            return {Short, ExchangeName, ShortStr, Bit, Bit, Bit, Bit, NoWait, Table};
         case DeclareOk:
             return {};
         case Delete:
-            return {ExchangeName, Bit, NoWait};
+            return {Short, ExchangeName, Bit, NoWait};
         case DeleteOk:
             return {};
         default:
@@ -72,23 +72,23 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         switch (methodId) {
             using namespace Queue;
         case Declare:
-            return {QueueName, Bit, Bit, Bit, Bit, NoWait, Table};
+            return {Short, QueueName, Bit, Bit, Bit, Bit, NoWait, Table};
         case DeclareOk:
             return {QueueName, MessageCount, Long};
         case Bind:
-            return {QueueName, ExchangeName, ShortStr, NoWait, Table};
+            return {Short, QueueName, ExchangeName, ShortStr, NoWait, Table};
         case BindOk:
             return {};
         case Unbind:
-            return {QueueName, ExchangeName, ShortStr, Table};
+            return {Short, QueueName, ExchangeName, ShortStr, Table};
         case UnbindOk:
             return {};
         case Purge:
-            return {QueueName, NoWait};
+            return {Short, QueueName, NoWait};
         case PurgeOk:
             return {MessageCount};
         case Delete:
-            return {QueueName, Bit, Bit, NoWait};
+            return {Short, QueueName, Bit, Bit, NoWait};
         case DeleteOk:
             return {MessageCount};
         default:
@@ -103,7 +103,7 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         case QosOk:
             return {};
         case Consume:
-            return {QueueName, ConsumerTag, NoLocal, NoAck, Bit, NoWait, Table};
+            return {Short, QueueName, ConsumerTag, NoLocal, NoAck, Bit, NoWait, Table};
         case ConsumeOk:
             return {ConsumerTag};
         case Cancel:
@@ -111,17 +111,17 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         case CancelOk:
             return {ConsumerTag};
         case Publish:
-            return {ExchangeName, ShortStr, Bit, Bit};
+            return {Short, ExchangeName, ShortStr, Bit, Bit};
         case Return:
             return {ReplyCode, ReplyText, ExchangeName, ShortStr};
         case Deliver:
             return {ConsumerTag, DeliveryTag, Redelivered, ExchangeName, ShortStr};
         case Get:
-            return {QueueName, NoAck};
+            return {Short, QueueName, NoAck};
         case GetOk:
             return {DeliveryTag, Redelivered, ExchangeName, ShortStr, MessageCount};
         case GetEmpty:
-            return {};
+            return {ShortStr};
         case Ack:
             return {DeliveryTag, Bit};
         case Reject:
