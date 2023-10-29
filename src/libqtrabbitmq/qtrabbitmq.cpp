@@ -1,6 +1,6 @@
 #include <qtrabbitmq/qtrabbitmq.h>
 
-#include "frame_handlers.h"
+#include "connection_handler.h"
 #include "spec_constants.h"
 
 #include <QSslError>

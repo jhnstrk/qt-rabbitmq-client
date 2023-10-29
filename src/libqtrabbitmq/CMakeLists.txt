@@ -10,6 +10,8 @@ set(QMQ_SOURCES_CPP
   decimal.cpp
   frame.cpp
   frame_handlers.cpp
+  channel_handler.cpp
+  connection_handler.cpp
   spec_constants.cpp
 )
 
@@ -22,6 +24,8 @@ set(QMQ_HEADERS
   frame.h
   spec_constants.h
   frame_handlers.h
+  channel_handler.h
+  connection_handler.h
 )
 
 set(QMQ_SOURCES
