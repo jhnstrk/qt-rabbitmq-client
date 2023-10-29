@@ -6,30 +6,30 @@
 namespace qmq {
 
 namespace Domain {
-static constexpr const FieldValue Bit = FieldValue::Bit;
-static constexpr const FieldValue ClassId = FieldValue::ShortInt;
-static constexpr const FieldValue ConsumerTag = FieldValue::ShortString;
-static constexpr const FieldValue DeliveryTag = FieldValue::LongLongInt;
-static constexpr const FieldValue ExchangeName = FieldValue::ShortString;
-static constexpr const FieldValue Long = FieldValue::LongInt;
-static constexpr const FieldValue LongLong = FieldValue::LongLongInt;
-static constexpr const FieldValue LongStr = FieldValue::LongString;
-static constexpr const FieldValue MessageCount = FieldValue::LongInt;
-static constexpr const FieldValue MethodId = FieldValue::ShortInt;
-static constexpr const FieldValue NoAck = FieldValue::Bit;
-static constexpr const FieldValue NoLocal = FieldValue::Bit;
-static constexpr const FieldValue NoWait = FieldValue::Bit;
-static constexpr const FieldValue Octet = FieldValue::ShortShortUint;
-static constexpr const FieldValue Path = FieldValue::ShortString;
-static constexpr const FieldValue PeerProperties = FieldValue::FieldTable;
-static constexpr const FieldValue QueueName = FieldValue::ShortString;
-static constexpr const FieldValue Redelivered = FieldValue::Bit;
-static constexpr const FieldValue ReplyCode = FieldValue::ShortInt;
-static constexpr const FieldValue ReplyText = FieldValue::ShortInt;
-static constexpr const FieldValue Short = FieldValue::ShortInt;
-static constexpr const FieldValue ShortStr = FieldValue::ShortString;
-static constexpr const FieldValue Table = FieldValue::FieldTable;
-static constexpr const FieldValue Timestamp = FieldValue::Timestamp;
+constexpr const FieldValue Bit = FieldValue::Bit;
+constexpr const FieldValue ClassId = FieldValue::ShortInt;
+constexpr const FieldValue ConsumerTag = FieldValue::ShortString;
+constexpr const FieldValue DeliveryTag = FieldValue::LongLongInt;
+constexpr const FieldValue ExchangeName = FieldValue::ShortString;
+constexpr const FieldValue Long = FieldValue::LongInt;
+constexpr const FieldValue LongLong = FieldValue::LongLongInt;
+constexpr const FieldValue LongStr = FieldValue::LongString;
+constexpr const FieldValue MessageCount = FieldValue::LongInt;
+constexpr const FieldValue MethodId = FieldValue::ShortInt;
+constexpr const FieldValue NoAck = FieldValue::Bit;
+constexpr const FieldValue NoLocal = FieldValue::Bit;
+constexpr const FieldValue NoWait = FieldValue::Bit;
+constexpr const FieldValue Octet = FieldValue::ShortShortUint;
+constexpr const FieldValue Path = FieldValue::ShortString;
+constexpr const FieldValue PeerProperties = FieldValue::FieldTable;
+constexpr const FieldValue QueueName = FieldValue::ShortString;
+constexpr const FieldValue Redelivered = FieldValue::Bit;
+constexpr const FieldValue ReplyCode = FieldValue::ShortInt;
+constexpr const FieldValue ReplyText = FieldValue::ShortString;
+constexpr const FieldValue Short = FieldValue::ShortInt;
+constexpr const FieldValue ShortStr = FieldValue::ShortString;
+constexpr const FieldValue Table = FieldValue::FieldTable;
+constexpr const FieldValue Timestamp = FieldValue::Timestamp;
 }; // namespace Domain
 
 namespace Connection {
@@ -71,30 +71,30 @@ constexpr const quint16 ID_ = 90, Select = 10, SelectOk = 11, Commit = 20, Commi
 };
 
 namespace Constants {
-static constexpr const int FrameMethod = 1;
-static constexpr const int FrameHeader = 2;
-static constexpr const int FrameBody = 3;
-static constexpr const int FrameHeartbeat = 8;
-static constexpr const int FrameMinSize = 4096;
-static constexpr const int FrameEnd = 206;
-static constexpr const int ReplySuccess = 200;
-static constexpr const int ContentTooLarge = 311;
-static constexpr const int NoConsumers = 313;
-static constexpr const int ConnectionForced = 320;
-static constexpr const int InvalidPath = 402;
-static constexpr const int AccessRefused = 403;
-static constexpr const int NotFound = 404;
-static constexpr const int ResourceLocked = 405;
-static constexpr const int PreconditionFailed = 406;
-static constexpr const int FrameRrror = 501;
-static constexpr const int SyntaxError = 502;
-static constexpr const int CommandInvalid = 503;
-static constexpr const int ChannelError = 504;
-static constexpr const int UnexpectedFrame = 505;
-static constexpr const int ResourceRrror = 506;
-static constexpr const int NotAllowed = 530;
-static constexpr const int NotImplemented = 540;
-static constexpr const int InternalError = 541;
+constexpr const int FrameMethod = 1;
+constexpr const int FrameHeader = 2;
+constexpr const int FrameBody = 3;
+constexpr const int FrameHeartbeat = 8;
+constexpr const int FrameMinSize = 4096;
+constexpr const int FrameEnd = 206;
+constexpr const int ReplySuccess = 200;
+constexpr const int ContentTooLarge = 311;
+constexpr const int NoConsumers = 313;
+constexpr const int ConnectionForced = 320;
+constexpr const int InvalidPath = 402;
+constexpr const int AccessRefused = 403;
+constexpr const int NotFound = 404;
+constexpr const int ResourceLocked = 405;
+constexpr const int PreconditionFailed = 406;
+constexpr const int FrameRrror = 501;
+constexpr const int SyntaxError = 502;
+constexpr const int CommandInvalid = 503;
+constexpr const int ChannelError = 504;
+constexpr const int UnexpectedFrame = 505;
+constexpr const int ResourceRrror = 506;
+constexpr const int NotAllowed = 530;
+constexpr const int NotImplemented = 540;
+constexpr const int InternalError = 541;
 }; // namespace Constants
 
 QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId);

@@ -71,11 +71,15 @@ public:
     QUrl connectionUrl() const;
     void connectToHost(const QUrl &url);
 
+    QString virtualHost() const;
+
 Q_SIGNALS:
     void connected();
 
 public Q_SLOTS:
     bool sendFrame(detail::Frame *f);
+
+    void disconnectFromHost();
 
 protected Q_SLOTS:
     void onSocketConnected();

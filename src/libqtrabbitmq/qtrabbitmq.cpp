@@ -26,6 +26,9 @@ class Client::Private
 public:
     QSslSocket *socket = nullptr;
     QUrl url;
+    QString vhost;
+    QString userName;
+    QString password;
     QScopedPointer<detail::ConnectionHandler> connection;
 };
 
@@ -73,6 +76,9 @@ void Client::connectToHost(const QUrl &url)
     port = url.port(port);
 
     d->url = url;
+    d->vhost = vhost;
+    d->userName = url.userName();
+    d->password = url.password();
 
     d->socket = new QSslSocket(this);
     d->socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
@@ -88,6 +94,11 @@ void Client::connectToHost(const QUrl &url)
     } else {
         d->socket->connectToHost(url.host(), port);
     }
+}
+
+QString Client::virtualHost() const
+{
+    return d->vhost;
 }
 
 bool Client::sendFrame(detail::Frame *f)
@@ -144,6 +155,15 @@ void Client::onSocketReadyRead()
     }
 
 #warning(TODO)
+}
+
+void Client::disconnectFromHost()
+{
+    if (!d->socket) {
+        qWarning() << "Already disconnected";
+        return;
+    }
+    d->socket->disconnectFromHost();
 }
 
 void Client::onSocketSslErrors(const QList<QSslError> &errors)

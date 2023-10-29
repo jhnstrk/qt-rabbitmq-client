@@ -1,4 +1,5 @@
 #include "frame.h"
+#include "spec_constants.h"
 
 #include <QBuffer>
 #include <QDateTime>
@@ -850,17 +851,18 @@ QByteArray qmq::detail::MethodFrame::content() const
     return io.data();
 }
 
-QVariantList qmq::detail::MethodFrame::getArguments(const QList<FieldValue> &types, bool *ok) const
+QVariantList qmq::detail::MethodFrame::getArguments(bool *ok) const
 {
+    const QList<FieldValue> types = methodArgs(this->classId(), this->methodId());
     QBuffer io;
     io.setData(this->m_arguments);
     bool isOk = io.open(QIODevice::ReadOnly);
     return Frame::readNativeFieldValues(&io, types, ok);
 }
 
-bool qmq::detail::MethodFrame::setArguments(const QVariantList &values,
-                                            const QList<FieldValue> &types)
+bool qmq::detail::MethodFrame::setArguments(const QVariantList &values)
 {
+    const QList<FieldValue> types = methodArgs(this->classId(), this->methodId());
     if (values.size() != types.size()) {
         qCritical() << "Size of values does not match types";
         return false;

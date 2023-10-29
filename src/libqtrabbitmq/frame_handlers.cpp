@@ -18,6 +18,12 @@ bool ConnectionHandler::handleFrame(const MethodFrame *frame)
         return this->onStart(frame);
     case Connection::Tune:
         return this->onTune(frame);
+    case Connection::OpenOk:
+        return this->onOpenOk(frame);
+    case Connection::Close:
+        return this->onClose(frame);
+    case Connection::CloseOk:
+        return this->onCloseOk(frame);
     default:
         qWarning() << "Unknown connection frame" << frame->methodId();
         break;
@@ -29,8 +35,7 @@ bool ConnectionHandler::onStart(const MethodFrame *frame)
 {
     qDebug() << "Frane content" << frame->content();
     bool ok;
-    const QVariantList args = frame->getArguments(methodArgs(frame->classId(), frame->methodId()),
-                                                  &ok);
+    const QVariantList args = frame->getArguments(&ok);
     if (!ok) {
         qWarning() << "Failed to parse args";
         return false;
@@ -55,7 +60,7 @@ bool ConnectionHandler::sendStartOk()
     qDebug() << "Create Method frame" << response;
     MethodFrame frame(0, Connection::ID_, Connection::StartOk);
     qDebug() << "Set method frame args" << args;
-    frame.setArguments(args, methodArgs(Connection::ID_, Connection::StartOk));
+    frame.setArguments(args);
     return m_client->sendFrame(&frame);
 }
 
@@ -63,8 +68,7 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
 {
     qDebug() << "Frane content" << frame->content();
     bool ok;
-    const QVariantList args = frame->getArguments(methodArgs(frame->classId(), frame->methodId()),
-                                                  &ok);
+    const QVariantList args = frame->getArguments(&ok);
     if (!ok) {
         qWarning() << "Failed to parse args";
         return false;
@@ -74,7 +78,7 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
     this->m_channelMax = args.at(0).toInt(&ok);
     this->m_frameMaxSizeBytes = args.at(1).toLongLong(&ok);
     this->m_heartbeatSeconds = args.at(2).toInt(&ok);
-    this->sendTuneOk();
+    this->sendTuneOk() && this->sendOpen();
     return true;
 }
 
@@ -83,8 +87,71 @@ bool ConnectionHandler::sendTuneOk()
     QVariantList args({this->m_channelMax, this->m_frameMaxSizeBytes, this->m_heartbeatSeconds});
     MethodFrame frame(0, Connection::ID_, Connection::TuneOk);
     qDebug() << "Set method frame args" << args;
-    frame.setArguments(args, methodArgs(Connection::ID_, Connection::TuneOk));
+    frame.setArguments(args);
     return m_client->sendFrame(&frame);
+}
+
+bool ConnectionHandler::sendOpen()
+{
+    const QString virtualHost = m_client->virtualHost();
+    const QString reserved1 = 0;  // capabilities
+    const bool reserved2 = false; // insist
+    QVariantList args({virtualHost, reserved1, reserved2});
+    MethodFrame frame(0, Connection::ID_, Connection::Open);
+    qDebug() << "Set method frame args" << args;
+    frame.setArguments(args);
+    return m_client->sendFrame(&frame);
+}
+
+bool ConnectionHandler::onOpenOk(const MethodFrame *frame)
+{
+    qDebug() << "OpenOk";
+    return true;
+}
+
+bool ConnectionHandler::onClose(const MethodFrame *frame)
+{
+    bool ok;
+    const QVariantList args = frame->getArguments(&ok);
+    if (!ok) {
+        qWarning() << "Failed to parse args";
+        return false;
+    }
+    qDebug() << "Close" << args;
+    const int code = args.at(0).toInt();
+    const QString replyText = args.at(1).toString();
+    const int classId = args.at(2).toInt();
+    const int methodId = args.at(3).toInt();
+    qDebug() << "Received close";
+    this->sendCloseOk();
+    m_client->disconnectFromHost();
+    return true;
+}
+
+bool ConnectionHandler::sendCloseOk()
+{
+    MethodFrame frame(0, Connection::ID_, Connection::CloseOk);
+    qDebug() << "Sending CloseOk";
+    return m_client->sendFrame(&frame);
+}
+
+bool ConnectionHandler::sendClose(qint16 code,
+                                  const QString &replyText,
+                                  quint16 classId,
+                                  quint16 methodId)
+{
+    QVariantList args({code, replyText, classId, methodId});
+    MethodFrame frame(0, Connection::ID_, Connection::Close);
+    qDebug() << "Set close frame args" << args;
+    frame.setArguments(args);
+    return m_client->sendFrame(&frame);
+}
+
+bool ConnectionHandler::onCloseOk(const MethodFrame *)
+{
+    qDebug() << "CloseOk received";
+    m_client->disconnectFromHost();
+    return true;
 }
 
 } // namespace detail

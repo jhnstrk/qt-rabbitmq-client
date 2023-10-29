@@ -69,8 +69,8 @@ public:
 
     QByteArray content() const override;
 
-    QVariantList getArguments(const QList<FieldValue> &types, bool *ok = nullptr) const;
-    bool setArguments(const QVariantList &values, const QList<FieldValue> &types);
+    QVariantList getArguments(bool *ok = nullptr) const;
+    bool setArguments(const QVariantList &values);
 
     MethodFrame(quint16 channel, quint16 classId, quint16 methodId)
         : Frame(qmq::FrameType::Method, channel)
