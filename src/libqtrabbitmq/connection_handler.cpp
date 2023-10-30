@@ -1,6 +1,7 @@
 #include "connection_handler.h"
 #include "spec_constants.h"
 #include <qtrabbitmq/authentication.h>
+#include <qtrabbitmq/client.h>
 
 namespace {
 const quint16 channel0 = 0; // All connection methods use channel = 0.

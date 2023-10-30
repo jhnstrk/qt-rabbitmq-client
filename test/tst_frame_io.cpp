@@ -1,9 +1,9 @@
+#include <qtrabbitmq/frame.h>
+
 #include <QBuffer>
 #include <QDebug>
 #include <QObject>
 #include <QtTest>
-
-#include <frame.h>
 
 class FrameIoTest : public QObject
 {
@@ -22,14 +22,14 @@ private slots:
         QBuffer buffer;
 
         // Buffer is not open. Expect writing to fail.
-        QCOMPARE(qmq::detail::Frame::writeFieldValue(&buffer, tstValue), false);
+        QCOMPARE(qmq::Frame::writeFieldValue(&buffer, tstValue), false);
 
         QVERIFY(buffer.open(QBuffer::ReadWrite));
 
-        QVERIFY(qmq::detail::Frame::writeFieldValue(&buffer, tstValue));
+        QVERIFY(qmq::Frame::writeFieldValue(&buffer, tstValue));
         bool ok;
         buffer.seek(0);
-        const QVariant actual = qmq::detail::Frame::readFieldValue(&buffer, &ok);
+        const QVariant actual = qmq::Frame::readFieldValue(&buffer, &ok);
         QCOMPARE(actual, tstValue);
     }
 
@@ -60,10 +60,10 @@ private slots:
         QBuffer buffer;
         QVERIFY(buffer.open(QBuffer::ReadWrite));
 
-        QVERIFY(qmq::detail::Frame::writeFieldValue(&buffer, value));
+        QVERIFY(qmq::Frame::writeFieldValue(&buffer, value));
         bool ok;
         buffer.seek(0);
-        const QVariant actual = qmq::detail::Frame::readFieldValue(&buffer, &ok);
+        const QVariant actual = qmq::Frame::readFieldValue(&buffer, &ok);
         QCOMPARE(actual.typeId(), value.typeId());
         QCOMPARE(actual, value);
     }
@@ -75,11 +75,11 @@ private slots:
         const QFETCH(QVariant, value);
         QBuffer buffer;
         QVERIFY(buffer.open(QBuffer::ReadWrite));
-        const qmq::FieldValue type = qmq::detail::Frame::metatypeToFieldValue(value.typeId());
-        QVERIFY(qmq::detail::Frame::writeNativeFieldValues(&buffer, {value}, {type}));
+        const qmq::FieldValue type = qmq::Frame::metatypeToFieldValue(value.typeId());
+        QVERIFY(qmq::Frame::writeNativeFieldValues(&buffer, {value}, {type}));
         bool ok;
         buffer.seek(0);
-        const QVariantList actual = qmq::detail::Frame::readNativeFieldValues(&buffer, {type}, &ok);
+        const QVariantList actual = qmq::Frame::readNativeFieldValues(&buffer, {type}, &ok);
 
         QCOMPARE(actual.size(), 1);
         QCOMPARE(actual.first().typeId(), value.typeId());
@@ -119,10 +119,10 @@ private slots:
 
         QBuffer buffer;
         QVERIFY(buffer.open(QBuffer::ReadWrite));
-        QVERIFY(qmq::detail::Frame::writeNativeFieldValues(&buffer, values, types));
+        QVERIFY(qmq::Frame::writeNativeFieldValues(&buffer, values, types));
         bool ok;
         buffer.seek(0);
-        const QVariantList actual = qmq::detail::Frame::readNativeFieldValues(&buffer, types, &ok);
+        const QVariantList actual = qmq::Frame::readNativeFieldValues(&buffer, types, &ok);
 
         QCOMPARE(actual.size(), values.size());
         QCOMPARE(actual, values);

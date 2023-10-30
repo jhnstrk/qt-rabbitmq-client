@@ -1,6 +1,6 @@
 #include <qtrabbitmq/qtrabbitmq.h>
 
-#include "frame.h"
+#include <qtrabbitmq/frame.h>
 
 namespace qmq {
 

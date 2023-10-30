@@ -1,5 +1,6 @@
 #include "channel_handler.h"
 #include "spec_constants.h"
+#include <qtrabbitmq/client.h>
 
 namespace qmq {
 namespace detail {

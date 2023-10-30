@@ -1,9 +1,14 @@
 #pragma once
 
+#include <qglobal.h>
 #include <qtrabbitmq/qtrabbitmq.h>
 
+#include <QIODevice>
+#include <QList>
+#include <QMetaType>
+#include <QVariant>
+
 namespace qmq {
-namespace detail {
 
 enum class ErrorCode {
     NoError = 0,
@@ -141,5 +146,4 @@ private:
     {}
 };
 
-} // namespace detail
 } // namespace qmq

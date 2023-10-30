@@ -1,8 +1,11 @@
 #pragma once
 
 #include "frame_handlers.h"
+#include <qglobal.h>
 
 namespace qmq {
+class Client;
+
 namespace detail {
 class ChannelHandler : public AbstractMethodHandler
 {

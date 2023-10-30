@@ -1,5 +1,7 @@
-#include "frame.h"
 #include "spec_constants.h"
+#include <qtrabbitmq/frame.h>
+
+#include <qtrabbitmq/decimal.h>
 
 #include <QBuffer>
 #include <QDateTime>
@@ -300,7 +302,7 @@ QVariantList readAmqpVariantFieldArray(QIODevice *io, bool *ok)
     }
     QVariantList items;
     while (!packedIo.atEnd()) {
-        const QVariant nextItem = qmq::detail::Frame::readFieldValue(&packedIo, &isOk);
+        const QVariant nextItem = qmq::Frame::readFieldValue(&packedIo, &isOk);
         if (!isOk) {
             if (ok)
                 *ok = false;
@@ -322,7 +324,7 @@ bool writeAmqpFieldArray(QIODevice *io, const QVariantList &value)
         }
 
         for (const QVariant &item : value) {
-            bool ok = qmq::detail::Frame::writeFieldValue(&packedIo, item);
+            bool ok = qmq::Frame::writeFieldValue(&packedIo, item);
             if (!ok)
                 return false;
         }
@@ -391,7 +393,7 @@ QVariantHash readAmqpVariantFieldTable(QIODevice *io, bool *ok)
                 *ok = false;
             return items;
         }
-        const QVariant nextItem = qmq::detail::Frame::readFieldValue(&packedIo, &isOk);
+        const QVariant nextItem = qmq::Frame::readFieldValue(&packedIo, &isOk);
         if (!isOk) {
             if (ok)
                 *ok = false;
@@ -416,7 +418,7 @@ bool writeAmqpFieldTable(QIODevice *io, const QVariantHash &value)
             bool ok = writeAmqpShortString(&packedIo, it->first);
             if (!ok)
                 return false;
-            ok = qmq::detail::Frame::writeFieldValue(&packedIo, it->second);
+            ok = qmq::Frame::writeFieldValue(&packedIo, it->second);
             if (!ok)
                 return false;
         }
@@ -443,7 +445,7 @@ bool writeAmqpVariantFieldTable(QIODevice *io, const QVariant &value)
 
 } // namespace
 
-qmq::FieldValue qmq::detail::Frame::metatypeToFieldValue(int typeId)
+qmq::FieldValue qmq::Frame::metatypeToFieldValue(int typeId)
 {
     switch (typeId) {
     case QMetaType::Type::Bool:
@@ -490,7 +492,7 @@ qmq::FieldValue qmq::detail::Frame::metatypeToFieldValue(int typeId)
     return qmq::FieldValue::Invalid;
 }
 
-QMetaType::Type qmq::detail::Frame::fieldValueToMetatype(qmq::FieldValue fieldtype)
+QMetaType::Type qmq::Frame::fieldValueToMetatype(qmq::FieldValue fieldtype)
 {
     switch (fieldtype) {
     case qmq::FieldValue::Bit:
@@ -536,7 +538,7 @@ QMetaType::Type qmq::detail::Frame::fieldValueToMetatype(qmq::FieldValue fieldty
     }
 }
 
-QVariant qmq::detail::Frame::readFieldValue(QIODevice *io, bool *ok)
+QVariant qmq::Frame::readFieldValue(QIODevice *io, bool *ok)
 {
     bool isOk;
     const FieldValue type = static_cast<FieldValue>(readAmqp<quint8>(io, &isOk));
@@ -548,7 +550,7 @@ QVariant qmq::detail::Frame::readFieldValue(QIODevice *io, bool *ok)
     return readNativeFieldValue(io, type, ok);
 }
 
-QVariant qmq::detail::Frame::readNativeFieldValue(QIODevice *io, FieldValue type, bool *ok)
+QVariant qmq::Frame::readNativeFieldValue(QIODevice *io, FieldValue type, bool *ok)
 {
     switch (type) {
     case FieldValue::Boolean:
@@ -605,9 +607,9 @@ QVariant qmq::detail::Frame::readNativeFieldValue(QIODevice *io, FieldValue type
     }
 }
 
-QVariantList qmq::detail::Frame::readNativeFieldValues(QIODevice *io,
-                                                       const QList<FieldValue> &types,
-                                                       bool *ok)
+QVariantList qmq::Frame::readNativeFieldValues(QIODevice *io,
+                                               const QList<FieldValue> &types,
+                                               bool *ok)
 {
     bool isOk = true;
     int bitPos = 0;
@@ -638,13 +640,13 @@ QVariantList qmq::detail::Frame::readNativeFieldValues(QIODevice *io,
     return ret;
 }
 
-bool qmq::detail::Frame::writeFieldValue(QIODevice *io, const QVariant &value)
+bool qmq::Frame::writeFieldValue(QIODevice *io, const QVariant &value)
 {
     const FieldValue valueType = metatypeToFieldValue(value.typeId());
     return writeFieldValue(io, value, valueType);
 }
 
-bool qmq::detail::Frame::writeFieldValue(QIODevice *io, const QVariant &value, FieldValue valueType)
+bool qmq::Frame::writeFieldValue(QIODevice *io, const QVariant &value, FieldValue valueType)
 {
     const bool ok = writeAmqp<quint8>(io, static_cast<quint8>(valueType));
     if (!ok)
@@ -653,9 +655,7 @@ bool qmq::detail::Frame::writeFieldValue(QIODevice *io, const QVariant &value, F
     return writeNativeFieldValue(io, value, valueType);
 }
 
-bool qmq::detail::Frame::writeNativeFieldValue(QIODevice *io,
-                                               const QVariant &value,
-                                               FieldValue valueType)
+bool qmq::Frame::writeNativeFieldValue(QIODevice *io, const QVariant &value, FieldValue valueType)
 {
     switch (valueType) {
     case FieldValue::Boolean:
@@ -701,9 +701,9 @@ bool qmq::detail::Frame::writeNativeFieldValue(QIODevice *io,
     }
 }
 
-bool qmq::detail::Frame::writeNativeFieldValues(QIODevice *io,
-                                                const QVariantList &values,
-                                                const QList<FieldValue> &types)
+bool qmq::Frame::writeNativeFieldValues(QIODevice *io,
+                                        const QVariantList &values,
+                                        const QList<FieldValue> &types)
 {
     bool ok = true;
     int bitPos = 0;
@@ -739,9 +739,7 @@ bool qmq::detail::Frame::writeNativeFieldValues(QIODevice *io,
     return ok;
 }
 
-qmq::detail::Frame *qmq::detail::Frame::readFrame(QIODevice *io,
-                                                  quint32 maxFrameSize,
-                                                  ErrorCode *err)
+qmq::Frame *qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err)
 {
     if (io->bytesAvailable() < (FrameHeaderSize + 1)) {
         *err = ErrorCode::InsufficientDataAvailable;
@@ -797,7 +795,7 @@ qmq::detail::Frame *qmq::detail::Frame::readFrame(QIODevice *io,
     }
 }
 
-bool qmq::detail::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *f)
+bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *f)
 {
     qDebug() << "Write frame" << f->channel() << (int) f->type();
     const QByteArray content = f->content();
@@ -819,13 +817,11 @@ bool qmq::detail::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *
     return ok;
 }
 
-qmq::detail::BodyFrame *qmq::detail::BodyFrame::fromContent(quint16 channel,
-                                                            const QByteArray &content)
+qmq::BodyFrame *qmq::BodyFrame::fromContent(quint16 channel, const QByteArray &content)
 {
     return new BodyFrame(channel, content);
 }
-qmq::detail::MethodFrame *qmq::detail::MethodFrame::fromContent(quint16 channel,
-                                                                const QByteArray &content)
+qmq::MethodFrame *qmq::MethodFrame::fromContent(quint16 channel, const QByteArray &content)
 {
     QBuffer io;
     io.setData(content);
@@ -836,7 +832,7 @@ qmq::detail::MethodFrame *qmq::detail::MethodFrame::fromContent(quint16 channel,
     return new MethodFrame(channel, classId, methodId, arguments);
 }
 
-QByteArray qmq::detail::MethodFrame::content() const
+QByteArray qmq::MethodFrame::content() const
 {
     qDebug() << "Get method content";
     QBuffer io;
@@ -851,7 +847,7 @@ QByteArray qmq::detail::MethodFrame::content() const
     return io.data();
 }
 
-QVariantList qmq::detail::MethodFrame::getArguments(bool *ok) const
+QVariantList qmq::MethodFrame::getArguments(bool *ok) const
 {
     const QList<FieldValue> types = methodArgs(this->classId(), this->methodId());
     QBuffer io;
@@ -860,7 +856,7 @@ QVariantList qmq::detail::MethodFrame::getArguments(bool *ok) const
     return Frame::readNativeFieldValues(&io, types, ok);
 }
 
-bool qmq::detail::MethodFrame::setArguments(const QVariantList &values)
+bool qmq::MethodFrame::setArguments(const QVariantList &values)
 {
     const QList<FieldValue> types = methodArgs(this->classId(), this->methodId());
     if (values.size() != types.size()) {
@@ -877,13 +873,11 @@ bool qmq::detail::MethodFrame::setArguments(const QVariantList &values)
     return ok;
 }
 
-qmq::detail::HeaderFrame *qmq::detail::HeaderFrame::fromContent(quint16 channel,
-                                                                const QByteArray &content)
+qmq::HeaderFrame *qmq::HeaderFrame::fromContent(quint16 channel, const QByteArray &content)
 {
     return new HeaderFrame(channel);
 }
-qmq::detail::HeartbeatFrame *qmq::detail::HeartbeatFrame::fromContent(quint16 channel,
-                                                                      const QByteArray &content)
+qmq::HeartbeatFrame *qmq::HeartbeatFrame::fromContent(quint16 channel, const QByteArray &content)
 {
     return new HeartbeatFrame();
 }

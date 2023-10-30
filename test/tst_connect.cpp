@@ -1,4 +1,5 @@
-#include <qtrabbitmq/qtrabbitmq.h>
+#include <qtrabbitmq/client.h>
+#include <qtrabbitmq/decimal.h>
 
 #include <QDebug>
 #include <QHash>

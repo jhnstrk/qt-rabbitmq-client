@@ -1,3 +1,4 @@
+#include <qtrabbitmq/decimal.h>
 #include <qtrabbitmq/qtrabbitmq.h>
 
 #include <QDebug>

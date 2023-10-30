@@ -1,5 +1,8 @@
 #include "spec_constants.h"
 
+#include <QDebug>
+#include <QList>
+
 namespace qmq {
 
 QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)

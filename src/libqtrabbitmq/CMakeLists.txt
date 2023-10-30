@@ -5,13 +5,14 @@ set(CMAKE_AUTOMOC ON)
 include_directories(../include)
 
 set(QMQ_SOURCES_CPP
-  qtrabbitmq.cpp
   authentication.cpp
+  channel_handler.cpp
+  client.cpp
+  connection_handler.cpp
   decimal.cpp
   frame.cpp
   frame_handlers.cpp
-  channel_handler.cpp
-  connection_handler.cpp
+  qtrabbitmq.cpp
   spec_constants.cpp
 )
 
@@ -21,11 +22,13 @@ set(QMQ_HEADERS_MOC
 set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
   ../include/qtrabbitmq/authentication.h
-  frame.h
-  spec_constants.h
-  frame_handlers.h
+  ../include/qtrabbitmq/client.h
+  ../include/qtrabbitmq/decimal.h
+  ../include/qtrabbitmq/frame.h
   channel_handler.h
   connection_handler.h
+  frame_handlers.h
+  spec_constants.h
 )
 
 set(QMQ_SOURCES

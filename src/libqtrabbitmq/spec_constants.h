@@ -1,6 +1,7 @@
 #ifndef SPEC_CONSTANTS_H
 #define SPEC_CONSTANTS_H
 
+#include <qglobal.h>
 #include <qtrabbitmq/qtrabbitmq.h>
 
 namespace qmq {

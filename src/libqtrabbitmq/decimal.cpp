@@ -1,4 +1,4 @@
-#include <qtrabbitmq/qtrabbitmq.h>
+#include <qtrabbitmq/decimal.h>
 
 #include <QDataStream>
 #include <QDebug>

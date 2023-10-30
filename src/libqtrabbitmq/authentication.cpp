@@ -1,6 +1,6 @@
 #include <qtrabbitmq/authentication.h>
 
-#include "frame.h"
+#include <qtrabbitmq/frame.h>
 
 #include <QBuffer>
 
@@ -17,7 +17,7 @@ QByteArray AmqpPlainAuthenticator::responseBytes(const QByteArray &challenge) co
         data["LOGIN"] = this->m_username;
         data["PASSWORD"] = this->m_password;
         qDebug() << "Build AMQPLAIN response";
-        ok = detail::Frame::writeNativeFieldValue(&io, data, FieldValue::FieldTable);
+        ok = Frame::writeNativeFieldValue(&io, data, FieldValue::FieldTable);
     }
     return result.mid(4);
 }
