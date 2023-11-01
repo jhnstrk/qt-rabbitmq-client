@@ -1,5 +1,6 @@
 #include <qtrabbitmq/client.h>
 
+#include "channel_handler.h"
 #include "connection_handler.h"
 #include "spec_constants.h"
 
@@ -31,6 +32,10 @@ public:
     QString userName;
     QString password;
     QScopedPointer<detail::ConnectionHandler> connection;
+    quint32 maxFrameSizeBytes = 1024 * 1024;
+    QHash<quint16, qmq::detail::ChannelHandler *> channelHandlers;
+    quint16 nextChannelId = 1;
+    quint16 maxChannelId = 100;
 };
 
 Client::Client(QObject *parent)
@@ -102,9 +107,9 @@ QString Client::virtualHost() const
     return d->vhost;
 }
 
-bool Client::sendFrame(Frame *f)
+bool Client::sendFrame(const Frame *f)
 {
-    const quint32 maxFrameSize = 64 * 1024; // todo
+    const quint32 maxFrameSize = d->maxFrameSizeBytes;
     return Frame::writeFrame(d->socket, maxFrameSize, f);
 }
 
@@ -132,9 +137,17 @@ void Client::onSocketReadyRead()
         {
             const MethodFrame *mf = static_cast<MethodFrame *>(frame.get());
             switch (mf->classId()) {
-            case (int) Connection::ID_:
+            case Connection::ID_:
                 d->connection->handleFrame(mf);
                 break;
+            case Channel::ID_: {
+                detail::ChannelHandler *handler = d->channelHandlers.value(mf->channel());
+                if (handler) {
+                    handler->handleFrame(mf);
+                } else {
+                    qWarning() << "No handler for channel" << mf->channel();
+                }
+            } break;
             default:
                 qWarning() << "unhandled methd frame";
                 break;
@@ -167,10 +180,34 @@ void Client::disconnectFromHost()
     d->socket->disconnectFromHost();
 }
 
+int Client::openChannel()
+{
+    for (int i = 0; i < d->maxChannelId; i++) {
+        const quint16 channelId = d->nextChannelId++;
+        if (d->nextChannelId > d->maxChannelId) {
+            d->nextChannelId = 1;
+        }
+        if (!d->channelHandlers.contains(channelId)) {
+            detail::ChannelHandler *handler = new detail::ChannelHandler(this, channelId);
+            d->channelHandlers[channelId] = handler;
+            handler->sendOpen();
+            return channelId;
+        }
+    }
+    qWarning() << "No free channel available to open channel";
+    return -1;
+}
+
 void Client::onSocketSslErrors(const QList<QSslError> &errors)
 {
 #warning(TODO)
     qDebug() << "SSL errors" << errors;
+}
+
+bool Client::sendHeartbeat()
+{
+    qmq::HeartbeatFrame frame;
+    return this->sendFrame(&frame);
 }
 
 void Client::onSocketStateChanged(QAbstractSocket::SocketState state)

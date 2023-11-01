@@ -45,7 +45,7 @@ public:
 
     //! maxFrameSize of 0 is treated as unlimited.
     static Frame *readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
-    static bool writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *f);
+    static bool writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f);
 
     //! Note that bit type isn't handled here.
     static qmq::FieldValue metatypeToFieldValue(int typeId);
@@ -136,14 +136,15 @@ private:
 class HeartbeatFrame : public Frame
 {
 public:
+    HeartbeatFrame()
+        : Frame(qmq::FrameType::Heartbeat)
+    {}
+
     static HeartbeatFrame *fromContent(quint16 channel, const QByteArray &content);
 
     QByteArray content() const override { return QByteArray(); }
 
 private:
-    HeartbeatFrame()
-        : Frame(qmq::FrameType::Heartbeat)
-    {}
 };
 
 } // namespace qmq

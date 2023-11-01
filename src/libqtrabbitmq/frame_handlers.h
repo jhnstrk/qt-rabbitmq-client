@@ -1,3 +1,5 @@
+#pragma once
+
 #include <qtrabbitmq/qtrabbitmq.h>
 
 #include <qtrabbitmq/frame.h>

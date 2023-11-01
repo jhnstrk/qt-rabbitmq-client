@@ -10,6 +10,7 @@ set(QMQ_SOURCES_CPP
   client.cpp
   connection_handler.cpp
   decimal.cpp
+  exchange_handler.cpp
   frame.cpp
   frame_handlers.cpp
   qtrabbitmq.cpp
@@ -27,6 +28,7 @@ set(QMQ_HEADERS
   ../include/qtrabbitmq/frame.h
   channel_handler.h
   connection_handler.h
+  exchange_handler.h
   frame_handlers.h
   spec_constants.h
 )

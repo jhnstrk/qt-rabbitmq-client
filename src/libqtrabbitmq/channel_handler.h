@@ -10,7 +10,7 @@ namespace detail {
 class ChannelHandler : public AbstractMethodHandler
 {
 public:
-    ChannelHandler(Client *client);
+    ChannelHandler(Client *client, quint16 channelId);
     bool handleFrame(const MethodFrame *frame) override;
     bool sendOpen();
     bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);

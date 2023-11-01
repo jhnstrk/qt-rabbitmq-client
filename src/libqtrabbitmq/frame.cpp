@@ -795,7 +795,7 @@ qmq::Frame *qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode
     }
 }
 
-bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, Frame *f)
+bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
 {
     qDebug() << "Write frame" << f->channel() << (int) f->type();
     const QByteArray content = f->content();
@@ -877,7 +877,14 @@ qmq::HeaderFrame *qmq::HeaderFrame::fromContent(quint16 channel, const QByteArra
 {
     return new HeaderFrame(channel);
 }
+
 qmq::HeartbeatFrame *qmq::HeartbeatFrame::fromContent(quint16 channel, const QByteArray &content)
 {
+    if (channel != 0) {
+        qWarning() << "Hearbeat frame non-zero channel";
+    }
+    if (!content.isEmpty()) {
+        qWarning() << "Hearbeat frame has unexpected content, which has been discarded";
+    }
     return new HeartbeatFrame();
 }

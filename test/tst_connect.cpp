@@ -24,6 +24,9 @@ private slots:
         QSignalSpy spy(&client, &qmq::Client::connected);
         client.connectToHost(QUrl("amqp://rabbit:rabbit@localhost:5672/"));
         spy.wait(5000);
+
+        client.openChannel();
+        QTest::qWait(5000);
     }
 
     void cleanupTestCase()

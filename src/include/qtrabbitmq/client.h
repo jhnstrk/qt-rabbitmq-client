@@ -24,9 +24,12 @@ Q_SIGNALS:
     void connected();
 
 public Q_SLOTS:
-    bool sendFrame(Frame *f);
+    bool sendFrame(const Frame *f);
+    bool sendHeartbeat();
 
     void disconnectFromHost();
+
+    int openChannel();
 
 protected Q_SLOTS:
     void onSocketConnected();

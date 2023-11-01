@@ -15,7 +15,7 @@ ConnectionHandler::ConnectionHandler(Client *client)
 
 bool ConnectionHandler::handleFrame(const MethodFrame *frame)
 {
-    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::FrameType::Method));
+    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::Connection::ID_));
     switch (frame->methodId()) {
     case Connection::Start:
         return this->onStart(frame);
