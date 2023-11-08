@@ -137,10 +137,10 @@ void Client::onSocketReadyRead()
         {
             const MethodFrame *mf = static_cast<MethodFrame *>(frame.get());
             switch (mf->classId()) {
-            case Connection::ID_:
+            case spec::connection::ID_:
                 d->connection->handleFrame(mf);
                 break;
-            case Channel::ID_: {
+            case spec::channel::ID_: {
                 detail::ChannelHandler *handler = d->channelHandlers.value(mf->channel());
                 if (handler) {
                     handler->handleFrame(mf);

@@ -12,11 +12,11 @@ ChannelHandler::ChannelHandler(Client *client, quint16 channelId)
 
 bool ChannelHandler::handleFrame(const MethodFrame *frame)
 {
-    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::Channel::ID_));
+    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::spec::channel::ID_));
     switch (frame->methodId()) {
-    case Channel::OpenOk:
+    case spec::channel::OpenOk:
         return this->onOpenOk(frame);
-    case Channel::CloseOk:
+    case spec::channel::CloseOk:
         return this->onCloseOk(frame);
     default:
         qWarning() << "Unknown channel frame" << frame->methodId();
@@ -29,7 +29,7 @@ bool ChannelHandler::sendOpen()
 {
     const QString reserved1; // out-of-band
     QVariantList args({reserved1});
-    MethodFrame frame(this->m_channelId, Channel::ID_, Channel::Open);
+    MethodFrame frame(this->m_channelId, spec::channel::ID_, spec::channel::Open);
     qDebug() << "Set open channel method" << this->m_channelId << "frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
@@ -43,7 +43,7 @@ bool ChannelHandler::onOpenOk(const MethodFrame *frame)
         qWarning() << "Failed to parse args";
         return false;
     }
-    qDebug() << "Channel::OpenOk" << args;
+    qDebug() << "channel::OpenOk" << args;
     return true;
 }
 
@@ -53,7 +53,7 @@ bool ChannelHandler::sendClose(qint16 code,
                                quint16 methodId)
 {
     QVariantList args({code, replyText, classId, methodId});
-    MethodFrame frame(this->m_channelId, Channel::ID_, Channel::Close);
+    MethodFrame frame(this->m_channelId, spec::channel::ID_, spec::channel::Close);
     qDebug() << "Set close frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);

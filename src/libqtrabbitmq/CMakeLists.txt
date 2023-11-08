@@ -6,6 +6,7 @@ include_directories(../include)
 
 set(QMQ_SOURCES_CPP
   authentication.cpp
+  channel.cpp
   channel_handler.cpp
   client.cpp
   connection_handler.cpp
@@ -13,6 +14,7 @@ set(QMQ_SOURCES_CPP
   exchange_handler.cpp
   frame.cpp
   frame_handlers.cpp
+  queue.cpp
   qtrabbitmq.cpp
   spec_constants.cpp
 )
@@ -24,8 +26,11 @@ set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
   ../include/qtrabbitmq/authentication.h
   ../include/qtrabbitmq/client.h
+  ../include/qtrabbitmq/channel.h
   ../include/qtrabbitmq/decimal.h
   ../include/qtrabbitmq/frame.h
+  ../include/qtrabbitmq/message.h
+  ../include/qtrabbitmq/queue.h
   channel_handler.h
   connection_handler.h
   exchange_handler.h

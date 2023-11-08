@@ -15,17 +15,17 @@ ConnectionHandler::ConnectionHandler(Client *client)
 
 bool ConnectionHandler::handleFrame(const MethodFrame *frame)
 {
-    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::Connection::ID_));
+    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::spec::connection::ID_));
     switch (frame->methodId()) {
-    case Connection::Start:
+    case spec::connection::Start:
         return this->onStart(frame);
-    case Connection::Tune:
+    case spec::connection::Tune:
         return this->onTune(frame);
-    case Connection::OpenOk:
+    case spec::connection::OpenOk:
         return this->onOpenOk(frame);
-    case Connection::Close:
+    case spec::connection::Close:
         return this->onClose(frame);
-    case Connection::CloseOk:
+    case spec::connection::CloseOk:
         return this->onCloseOk(frame);
     default:
         qWarning() << "Unknown connection frame" << frame->methodId();
@@ -61,7 +61,7 @@ bool ConnectionHandler::sendStartOk()
     const QString locale = "en_US";
     QVariantList args({clientProperties, mechanism, response, locale});
     qDebug() << "Create Method frame" << response;
-    MethodFrame frame(channel0, Connection::ID_, Connection::StartOk);
+    MethodFrame frame(channel0, spec::connection::ID_, spec::connection::StartOk);
     qDebug() << "Set method frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
@@ -88,7 +88,7 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
 bool ConnectionHandler::sendTuneOk()
 {
     QVariantList args({this->m_channelMax, this->m_frameMaxSizeBytes, this->m_heartbeatSeconds});
-    MethodFrame frame(channel0, Connection::ID_, Connection::TuneOk);
+    MethodFrame frame(channel0, spec::connection::ID_, spec::connection::TuneOk);
     qDebug() << "Set method frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
@@ -100,7 +100,7 @@ bool ConnectionHandler::sendOpen()
     const QString reserved1 = 0;  // capabilities
     const bool reserved2 = false; // insist
     QVariantList args({virtualHost, reserved1, reserved2});
-    MethodFrame frame(channel0, Connection::ID_, Connection::Open);
+    MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Open);
     qDebug() << "Set method frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
@@ -133,7 +133,7 @@ bool ConnectionHandler::onClose(const MethodFrame *frame)
 
 bool ConnectionHandler::sendCloseOk()
 {
-    MethodFrame frame(channel0, Connection::ID_, Connection::CloseOk);
+    MethodFrame frame(channel0, spec::connection::ID_, spec::connection::CloseOk);
     qDebug() << "Sending CloseOk";
     return m_client->sendFrame(&frame);
 }
@@ -144,7 +144,7 @@ bool ConnectionHandler::sendClose(qint16 code,
                                   quint16 methodId)
 {
     QVariantList args({code, replyText, classId, methodId});
-    MethodFrame frame(channel0, Connection::ID_, Connection::Close);
+    MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Close);
     qDebug() << "Set close frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);

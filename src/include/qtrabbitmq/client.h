@@ -1,8 +1,10 @@
 #pragma once
 
+#include "channel.h"
 #include "frame.h"
 
 #include <QAbstractSocket>
+#include <QFuture>
 #include <QObject>
 #include <QScopedPointer>
 #include <QSslError>
@@ -20,6 +22,8 @@ public:
 
     QString virtualHost() const;
 
+    QFuture<Channel *> createChannel();
+    Channel *channel(quint16 channelId) const;
 Q_SIGNALS:
     void connected();
 

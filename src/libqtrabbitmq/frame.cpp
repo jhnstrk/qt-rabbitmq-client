@@ -849,7 +849,7 @@ QByteArray qmq::MethodFrame::content() const
 
 QVariantList qmq::MethodFrame::getArguments(bool *ok) const
 {
-    const QList<FieldValue> types = methodArgs(this->classId(), this->methodId());
+    const QList<FieldValue> types = spec::methodArgs(this->classId(), this->methodId());
     QBuffer io;
     io.setData(this->m_arguments);
     bool isOk = io.open(QIODevice::ReadOnly);
@@ -858,7 +858,7 @@ QVariantList qmq::MethodFrame::getArguments(bool *ok) const
 
 bool qmq::MethodFrame::setArguments(const QVariantList &values)
 {
-    const QList<FieldValue> types = methodArgs(this->classId(), this->methodId());
+    const QList<FieldValue> types = spec::methodArgs(this->classId(), this->methodId());
     if (values.size() != types.size()) {
         qCritical() << "Size of values does not match types";
         return false;

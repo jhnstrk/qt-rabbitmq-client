@@ -10,6 +10,7 @@ namespace detail {
 class ExchangeHandler : public AbstractMethodHandler
 {
 public:
+    // Types defined by Rabbit: https://www.rabbitmq.com/tutorials/amqp-concepts.html
     enum class ExchangeType { Invalid, Direct, Fanout, Topic, Match };
     ExchangeHandler(Client *client,
                     quint16 channelId,

@@ -17,11 +17,11 @@ ExchangeHandler::ExchangeHandler(Client *client,
 
 bool ExchangeHandler::handleFrame(const MethodFrame *frame)
 {
-    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::Exchange::ID_));
+    Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::spec::exchange::ID_));
     switch (frame->methodId()) {
-    case Exchange::DeclareOk:
+    case spec::exchange::DeclareOk:
         return this->onDeclareOk(frame);
-    case Exchange::DeleteOk:
+    case spec::exchange::DeleteOk:
         return this->onDeleteOk(frame);
     default:
         qWarning() << "Unknown exchange frame" << frame->methodId();
@@ -44,7 +44,7 @@ bool ExchangeHandler::sendDeclare()
 
     QVariantList args(
         {reserved1, exchange, type, passive, durable, reserved2, reserved3, noWait, arguments});
-    MethodFrame frame(this->m_channelId, Exchange::ID_, Exchange::Declare);
+    MethodFrame frame(this->m_channelId, spec::exchange::ID_, spec::exchange::Declare);
     qDebug() << "Send exchange::declare method" << this->m_channelId << "frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
@@ -63,7 +63,7 @@ bool ExchangeHandler::sendDelete()
     const bool ifUnused = false;
     const bool noWait = false;
     QVariantList args({reserved1, exchange, ifUnused, noWait});
-    MethodFrame frame(this->m_channelId, Exchange::ID_, Exchange::Delete);
+    MethodFrame frame(this->m_channelId, spec::exchange::ID_, spec::exchange::Delete);
     qDebug() << "Set excahnge::delete frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
@@ -108,7 +108,7 @@ ExchangeHandler::ExchangeType ExchangeHandler::stringToType(const QString &typeS
 
 bool ExchangeHandler::onDeleteOk(const MethodFrame *)
 {
-    qDebug() << "Exchange::DeleteOk received";
+    qDebug() << "spec::exchange::DeleteOk received";
     return true;
 }
 

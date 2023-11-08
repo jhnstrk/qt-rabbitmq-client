@@ -7,12 +7,12 @@ namespace qmq {
 
 QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
 {
-    using namespace Domain;
+    using namespace spec::domain;
 
     switch (methodClass) {
-    case Connection::ID_:
+    case spec::connection::ID_:
         switch (methodId) {
-            using namespace Connection;
+            using namespace spec::connection;
         case Start:
             return {Octet, Octet, PeerProperties, LongStr, LongStr};
         case StartOk:
@@ -37,9 +37,9 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
             break;
         }
         break;
-    case Channel::ID_:
+    case spec::channel::ID_:
         switch (methodId) {
-            using namespace Channel;
+            using namespace spec::channel;
         case Open:
             return {ShortStr};
         case OpenOk:
@@ -56,9 +56,9 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
             break;
         }
         break;
-    case Exchange::ID_:
+    case spec::exchange::ID_:
         switch (methodId) {
-            using namespace Exchange;
+            using namespace spec::exchange;
         case Declare:
             return {Short, ExchangeName, ShortStr, Bit, Bit, Bit, Bit, NoWait, Table};
         case DeclareOk:
@@ -71,9 +71,9 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
             break;
         }
         break;
-    case Queue::ID_:
+    case spec::queue::ID_:
         switch (methodId) {
-            using namespace Queue;
+            using namespace spec::queue;
         case Declare:
             return {Short, QueueName, Bit, Bit, Bit, Bit, NoWait, Table};
         case DeclareOk:
@@ -98,9 +98,9 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
             break;
         }
         break;
-    case Basic::ID_:
+    case spec::basic::ID_:
         switch (methodId) {
-            using namespace Basic;
+            using namespace spec::basic;
         case Qos:
             return {Long, Short, Bit};
         case QosOk:
@@ -139,16 +139,16 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
             break;
         }
         break;
-    case Confirm::ID_:
+    case spec::confirm::ID_:
         switch (methodId) {
-            using namespace Confirm;
+            using namespace spec::confirm;
         default:
             break;
         }
         break;
-    case Tx::ID_:
+    case spec::tx::ID_:
         switch (methodId) {
-            using namespace Tx;
+            using namespace spec::tx;
         case Select:
             return {};
         case SelectOk:

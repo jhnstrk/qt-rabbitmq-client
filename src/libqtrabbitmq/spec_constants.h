@@ -6,7 +6,9 @@
 
 namespace qmq {
 
-namespace Domain {
+namespace spec {
+
+namespace domain {
 constexpr const FieldValue Bit = FieldValue::Bit;
 constexpr const FieldValue ClassId = FieldValue::ShortInt;
 constexpr const FieldValue ConsumerTag = FieldValue::ShortString;
@@ -31,47 +33,47 @@ constexpr const FieldValue Short = FieldValue::ShortInt;
 constexpr const FieldValue ShortStr = FieldValue::ShortString;
 constexpr const FieldValue Table = FieldValue::FieldTable;
 constexpr const FieldValue Timestamp = FieldValue::Timestamp;
-}; // namespace Domain
+}; // namespace domain
 
-namespace Connection {
+namespace connection {
 constexpr const quint16 ID_ = 10, Start = 10, StartOk = 11, Secure = 20, SecureOk = 21, Tune = 30,
                         TuneOk = 31, Open = 40, OpenOk = 41, Close = 50, CloseOk = 51, Blocked = 60,
                         Unblocked = 61;
 
-} // namespace Connection
+} // namespace connection
 
-namespace Channel {
+namespace channel {
 constexpr const quint16 ID_ = 20, Open = 10, OpenOk = 11, Flow = 20, FlowOk = 21, Close = 40,
                         CloseOk = 41;
 }
 
-namespace Exchange {
+namespace exchange {
 constexpr const quint16 ID_ = 40, Declare = 10, DeclareOk = 11, Delete = 20, DeleteOk = 21,
                         Bind = 30, BindOk = 31, Unbind = 40, UnbindOk = 51;
 };
 
-namespace Queue {
+namespace queue {
 constexpr const quint16 ID_ = 50, Declare = 10, DeclareOk = 11, Bind = 20, BindOk = 21, Purge = 30,
                         PurgeOk = 31, Delete = 40, DeleteOk = 41, Unbind = 50, UnbindOk = 51;
 };
 
-namespace Basic {
+namespace basic {
 constexpr const quint16 ID_ = 60, Qos = 10, QosOk = 11, Consume = 20, ConsumeOk = 21, Cancel = 30,
                         CancelOk = 31, Publish = 40, Return = 50, Deliver = 60, Get = 70,
                         GetOk = 71, GetEmpty = 72, Ack = 80, Nack = 120, Reject = 90,
                         RecoverAsync = 100, Recover = 110, RecoverOk = 111;
 };
 
-namespace Confirm {
+namespace confirm {
 constexpr const quint16 ID_ = 85, Select = 10, SelectOk = 11;
 };
 
-namespace Tx {
+namespace tx {
 constexpr const quint16 ID_ = 90, Select = 10, SelectOk = 11, Commit = 20, CommitOk = 21,
                         Rollback = 30, RollbackOk = 31;
 };
 
-namespace Constants {
+namespace constants {
 constexpr const int FrameMethod = 1;
 constexpr const int FrameHeader = 2;
 constexpr const int FrameBody = 3;
@@ -96,9 +98,28 @@ constexpr const int ResourceRrror = 506;
 constexpr const int NotAllowed = 530;
 constexpr const int NotImplemented = 540;
 constexpr const int InternalError = 541;
-}; // namespace Constants
+}; // namespace constants
 
 QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId);
+
+enum class BasicProperty {
+    ContentType = 0,     // shortstr MIME content type
+    ContentEncoding = 1, // shortstr MIME content encoding
+    Headers = 2,         // table message header field table
+    DeliveryMode = 3,    // octet nonpersistent (1) or persistent (2)
+    Priority = 4,        // octet message priority, 0 to 9
+    CorrelationId = 5,   // shortstr application correlation identifier
+    ReplyTo = 6,         // shortstr address to reply to
+    Expiration = 7,      //shortstr message expiration specification
+    MessageId = 8,       //shortstr application message identifier
+    Timestamp = 9,       //timestamp message timestamp
+    Type = 10,           //shortstr message type name
+    UserId = 11,         //shortstr creating user id
+    AppId = 12,          //shortstr creating application id
+    _ClusterId = 13,     //shortstr reserved, must be empty
+};
+
+} // namespace spec
 
 } // namespace qmq
 
