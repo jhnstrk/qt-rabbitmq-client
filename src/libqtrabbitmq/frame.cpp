@@ -535,6 +535,9 @@ QMetaType::Type qmq::Frame::fieldValueToMetatype(qmq::FieldValue fieldtype)
         return QMetaType::Type::Void;
     case qmq::FieldValue::Invalid:
         return QMetaType::Type::UnknownType;
+    default:
+        qCritical() << "Bad Fieldtype" << (int) fieldtype;
+        return QMetaType::Type::UnknownType;
     }
 }
 
@@ -739,18 +742,18 @@ bool qmq::Frame::writeNativeFieldValues(QIODevice *io,
     return ok;
 }
 
-qmq::Frame *qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err)
+QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err)
 {
     if (io->bytesAvailable() < (FrameHeaderSize + 1)) {
         *err = ErrorCode::InsufficientDataAvailable;
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
 
     const int headerLen = FrameHeaderSize;
     char header[headerLen];
     if (io->peek(header, headerLen) != headerLen) {
         qWarning() << "peek failed";
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
     const FrameType t = static_cast<FrameType>(header[0]);
     const quint16 channel = qFromBigEndian<quint16>(header + 1);
@@ -758,12 +761,12 @@ qmq::Frame *qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode
 
     if (maxFrameSize != 0 && size > maxFrameSize) {
         *err = ErrorCode::FrameTooLarge;
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
     if (io->bytesAvailable() < (size + FrameHeaderSize + 1)) {
         qDebug() << "InsufficientDataAvailable" << io->bytesAvailable() << size << FrameHeaderSize;
         *err = ErrorCode::InsufficientDataAvailable;
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
 
     io->skip(FrameHeaderSize);
@@ -771,27 +774,27 @@ qmq::Frame *qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode
     const QByteArray content = io->read((size));
     if (content.size() != (size)) {
         *err = ErrorCode::IoError;
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
 
     bool ok;
     const quint8 endByte = readAmqp<quint8>(io, &ok);
     if (!ok || endByte != FrameEndChar) {
         *err = ErrorCode::InvalidFrameData;
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
     switch (t) {
     case qmq::FrameType::Method:
-        return MethodFrame::fromContent(channel, content);
+        return QScopedPointer<qmq::Frame>(MethodFrame::fromContent(channel, content).take());
     case qmq::FrameType::Header:
-        return HeaderFrame::fromContent(channel, content);
+        return QScopedPointer<qmq::Frame>(HeaderFrame::fromContent(channel, content).take());
     case qmq::FrameType::Body:
-        return BodyFrame::fromContent(channel, content);
+        return QScopedPointer<qmq::Frame>(BodyFrame::fromContent(channel, content).take());
     case qmq::FrameType::Heartbeat:
-        return HeartbeatFrame::fromContent(channel, content);
+        return QScopedPointer<qmq::Frame>(HeartbeatFrame::fromContent(channel, content).take());
     default:
         *err = ErrorCode::UnknownFrameType;
-        return nullptr;
+        return QScopedPointer<qmq::Frame>();
     }
 }
 
@@ -817,11 +820,13 @@ bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
     return ok;
 }
 
-qmq::BodyFrame *qmq::BodyFrame::fromContent(quint16 channel, const QByteArray &content)
+QScopedPointer<qmq::BodyFrame> qmq::BodyFrame::fromContent(quint16 channel,
+                                                           const QByteArray &content)
 {
-    return new BodyFrame(channel, content);
+    return QScopedPointer<qmq::BodyFrame>(new BodyFrame(channel, content));
 }
-qmq::MethodFrame *qmq::MethodFrame::fromContent(quint16 channel, const QByteArray &content)
+QScopedPointer<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
+                                                               const QByteArray &content)
 {
     QBuffer io;
     io.setData(content);
@@ -829,7 +834,7 @@ qmq::MethodFrame *qmq::MethodFrame::fromContent(quint16 channel, const QByteArra
     const quint16 classId = readAmqp<quint16>(&io, &ok);
     const quint16 methodId = readAmqp<quint16>(&io, &ok);
     const QByteArray arguments = content.mid(4);
-    return new MethodFrame(channel, classId, methodId, arguments);
+    return QScopedPointer<qmq::MethodFrame>(new MethodFrame(channel, classId, methodId, arguments));
 }
 
 QByteArray qmq::MethodFrame::content() const
@@ -873,12 +878,14 @@ bool qmq::MethodFrame::setArguments(const QVariantList &values)
     return ok;
 }
 
-qmq::HeaderFrame *qmq::HeaderFrame::fromContent(quint16 channel, const QByteArray &content)
+QScopedPointer<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
+                                                               const QByteArray &content)
 {
-    return new HeaderFrame(channel);
+    return QScopedPointer<qmq::HeaderFrame>(new HeaderFrame(channel));
 }
 
-qmq::HeartbeatFrame *qmq::HeartbeatFrame::fromContent(quint16 channel, const QByteArray &content)
+QScopedPointer<qmq::HeartbeatFrame> qmq::HeartbeatFrame::fromContent(quint16 channel,
+                                                                     const QByteArray &content)
 {
     if (channel != 0) {
         qWarning() << "Hearbeat frame non-zero channel";
@@ -886,5 +893,5 @@ qmq::HeartbeatFrame *qmq::HeartbeatFrame::fromContent(quint16 channel, const QBy
     if (!content.isEmpty()) {
         qWarning() << "Hearbeat frame has unexpected content, which has been discarded";
     }
-    return new HeartbeatFrame();
+    return QScopedPointer<qmq::HeartbeatFrame>(new HeartbeatFrame());
 }

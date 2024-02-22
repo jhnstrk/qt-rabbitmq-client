@@ -1,4 +1,8 @@
+# Editor and IDE settings
 .vscode/
+.project
+
+*.swp
 
 /build/
 CMakeLists.txt.user

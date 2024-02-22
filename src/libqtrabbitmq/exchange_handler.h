@@ -1,7 +1,7 @@
 #pragma once
 
-#include "frame_handlers.h"
 #include <qglobal.h>
+#include <qtrabbitmq/abstract_method_handler.h>
 
 namespace qmq {
 class Client;

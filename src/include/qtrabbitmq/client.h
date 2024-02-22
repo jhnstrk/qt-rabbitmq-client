@@ -7,6 +7,7 @@
 #include <QFuture>
 #include <QObject>
 #include <QScopedPointer>
+#include <QSharedPointer>
 #include <QSslError>
 
 namespace qmq {
@@ -22,8 +23,8 @@ public:
 
     QString virtualHost() const;
 
-    QFuture<Channel *> createChannel();
-    Channel *channel(quint16 channelId) const;
+    QSharedPointer<Channel> createChannel();
+    QSharedPointer<Channel> channel(quint16 channelId) const;
 Q_SIGNALS:
     void connected();
 
@@ -32,8 +33,6 @@ public Q_SLOTS:
     bool sendHeartbeat();
 
     void disconnectFromHost();
-
-    int openChannel();
 
 protected Q_SLOTS:
     void onSocketConnected();

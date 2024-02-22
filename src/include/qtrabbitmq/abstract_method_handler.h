@@ -6,14 +6,12 @@
 
 namespace qmq {
 
-namespace detail {
-
 class AbstractMethodHandler
 {
 public:
+    virtual ~AbstractMethodHandler() {}
+
     virtual bool handleFrame(const MethodFrame *frame) = 0;
 };
-
-} // namespace detail
 
 } // namespace qmq

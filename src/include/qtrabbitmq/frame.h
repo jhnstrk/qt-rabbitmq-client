@@ -6,6 +6,7 @@
 #include <QIODevice>
 #include <QList>
 #include <QMetaType>
+#include <QScopedPointer>
 #include <QVariant>
 
 namespace qmq {
@@ -44,7 +45,7 @@ public:
                                        const QList<FieldValue> &valueTypes);
 
     //! maxFrameSize of 0 is treated as unlimited.
-    static Frame *readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
+    static QScopedPointer<Frame> readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
     static bool writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f);
 
     //! Note that bit type isn't handled here.
@@ -67,7 +68,7 @@ private:
 class MethodFrame : public Frame
 {
 public:
-    static MethodFrame *fromContent(quint16 channel, const QByteArray &content);
+    static QScopedPointer<MethodFrame> fromContent(quint16 channel, const QByteArray &content);
 
     quint16 classId() const { return m_classId; }
     quint16 methodId() const { return m_methodId; }
@@ -101,7 +102,7 @@ private:
 class HeaderFrame : public Frame
 {
 public:
-    static HeaderFrame *fromContent(quint16 channel, const QByteArray &content);
+    static QScopedPointer<HeaderFrame> fromContent(quint16 channel, const QByteArray &content);
 
     QByteArray body() const { return m_body; }
     void setBody(const QByteArray &body) { m_body = body; }
@@ -118,7 +119,7 @@ private:
 class BodyFrame : public Frame
 {
 public:
-    static BodyFrame *fromContent(quint16 channel, const QByteArray &content);
+    static QScopedPointer<BodyFrame> fromContent(quint16 channel, const QByteArray &content);
 
     QByteArray body() const { return m_body; }
     void setBody(const QByteArray &body) { m_body = body; }
@@ -140,7 +141,7 @@ public:
         : Frame(qmq::FrameType::Heartbeat)
     {}
 
-    static HeartbeatFrame *fromContent(quint16 channel, const QByteArray &content);
+    static QScopedPointer<HeartbeatFrame> fromContent(quint16 channel, const QByteArray &content);
 
     QByteArray content() const override { return QByteArray(); }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "frame_handlers.h"
+#include "qtrabbitmq/abstract_method_handler.h"
 #include <qglobal.h>
 
 namespace qmq {

@@ -10,7 +10,7 @@ class RmqConnectTest : public QObject
 {
     Q_OBJECT
 
-private:
+    // private:
 private slots:
     void initTestCase()
     {
@@ -25,7 +25,13 @@ private slots:
         client.connectToHost(QUrl("amqp://rabbit:rabbit@localhost:5672/"));
         spy.wait(5000);
 
-        client.openChannel();
+        auto channel = client.createChannel();
+        QFuture<void> channelFut = channel->openChannel();
+        channelFut.waitForFinished();
+
+        QVERIFY(channelFut.isFinished());
+        QVERIFY(!channelFut.isCanceled());
+
         QTest::qWait(5000);
     }
 

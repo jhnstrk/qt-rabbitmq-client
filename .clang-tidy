@@ -1,0 +1,23 @@
+---
+  # misc-include-cleaner: Too many false positive issues with Qt's headers.
+  #  e.g. #include <QByteArray> doesn't directly include QByteArray and so gives warnings.
+  # Disables modernize-use-trailing-return-type
+  # Personal preference. int foo(double bar) or auto foo(double bar) -> int
+Checks: >-
+  clang-diagnostic-*,clang-analyzer-*,bugprone-*,
+  cert-*,concurrency-*,cppcoreguidelines-*,
+  misc-*,-misc-include-cleaner,
+  modernize-*,-modernize-use-trailing-return-type,
+  performance-*,portability-*,readability-*,
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle:     ''
+User:            ''
+CheckOptions:
+ExtraArgs:       []
+ExtraArgsBefore: []
+UseColor:        false
+...
+
+

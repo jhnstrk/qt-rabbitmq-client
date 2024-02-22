@@ -5,6 +5,8 @@
 
 namespace qmq {
 
+namespace spec {
+
 QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
 {
     using namespace spec::domain;
@@ -172,5 +174,7 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
     qWarning() << "Unknown method" << methodClass << methodId;
     return QList<qmq::FieldValue>();
 }
+
+} // namespace spec
 
 } // namespace qmq

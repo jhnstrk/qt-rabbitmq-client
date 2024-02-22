@@ -7,14 +7,11 @@ include_directories(../include)
 set(QMQ_SOURCES_CPP
   authentication.cpp
   channel.cpp
-  channel_handler.cpp
   client.cpp
   connection_handler.cpp
   decimal.cpp
   exchange_handler.cpp
   frame.cpp
-  frame_handlers.cpp
-  queue.cpp
   qtrabbitmq.cpp
   spec_constants.cpp
 )
@@ -24,17 +21,15 @@ set(QMQ_HEADERS_MOC
 
 set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
+  ../include/qtrabbitmq/abstract_method_handler.h
   ../include/qtrabbitmq/authentication.h
   ../include/qtrabbitmq/client.h
   ../include/qtrabbitmq/channel.h
   ../include/qtrabbitmq/decimal.h
   ../include/qtrabbitmq/frame.h
   ../include/qtrabbitmq/message.h
-  ../include/qtrabbitmq/queue.h
-  channel_handler.h
   connection_handler.h
   exchange_handler.h
-  frame_handlers.h
   spec_constants.h
 )
 

@@ -6,3 +6,11 @@ A client library for Rabbit-MQ for Qt applications.
 1. Install pre-commit using one of the methods described here: 
  https://pre-commit.com/
 2. Run `pre-commit install`
+
+TODOs:
+
+- Producer
+- Consumer
+- Heartbeat frames.
+- Improve tune.
+- Pluggable authentication.

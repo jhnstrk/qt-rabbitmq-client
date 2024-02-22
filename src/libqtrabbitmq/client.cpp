@@ -1,9 +1,10 @@
+#include <qtrabbitmq/channel.h>
 #include <qtrabbitmq/client.h>
 
-#include "channel_handler.h"
 #include "connection_handler.h"
 #include "spec_constants.h"
 
+#include <QByteArray>
 #include <QScopedPointer>
 #include <QSslSocket>
 #include <QString>
@@ -33,7 +34,7 @@ public:
     QString password;
     QScopedPointer<detail::ConnectionHandler> connection;
     quint32 maxFrameSizeBytes = 1024 * 1024;
-    QHash<quint16, qmq::detail::ChannelHandler *> channelHandlers;
+    QHash<quint16, QSharedPointer<qmq::Channel>> channels;
     quint16 nextChannelId = 1;
     quint16 maxChannelId = 100;
 };
@@ -123,7 +124,7 @@ void Client::onSocketReadyRead()
 {
     qDebug() << "Ready read";
     const quint32 maxFrameSize = 64 * 1024; // todo
-    ErrorCode errCode;
+    ErrorCode errCode = qmq::ErrorCode::NoError;
     QScopedPointer<Frame> frame(Frame::readFrame(d->socket, maxFrameSize, &errCode));
     if (frame) {
         qDebug() << "Read frame" << (int) frame->type();
@@ -135,17 +136,17 @@ void Client::onSocketReadyRead()
     case FrameType::Method:
         qDebug() << "Method frame";
         {
-            const MethodFrame *mf = static_cast<MethodFrame *>(frame.get());
-            switch (mf->classId()) {
+            const MethodFrame *methodFr = static_cast<MethodFrame *>(frame.get());
+            switch (methodFr->classId()) {
             case spec::connection::ID_:
-                d->connection->handleFrame(mf);
+                d->connection->handleFrame(methodFr);
                 break;
             case spec::channel::ID_: {
-                detail::ChannelHandler *handler = d->channelHandlers.value(mf->channel());
+                auto handler = d->channels.value(methodFr->channel());
                 if (handler) {
-                    handler->handleFrame(mf);
+                    handler->handleFrame(methodFr);
                 } else {
-                    qWarning() << "No handler for channel" << mf->channel();
+                    qWarning() << "No handler for channel" << methodFr->channel();
                 }
             } break;
             default:
@@ -180,28 +181,27 @@ void Client::disconnectFromHost()
     d->socket->disconnectFromHost();
 }
 
-int Client::openChannel()
+QSharedPointer<Channel> Client::createChannel()
 {
     for (int i = 0; i < d->maxChannelId; i++) {
         const quint16 channelId = d->nextChannelId++;
         if (d->nextChannelId > d->maxChannelId) {
             d->nextChannelId = 1;
         }
-        if (!d->channelHandlers.contains(channelId)) {
-            detail::ChannelHandler *handler = new detail::ChannelHandler(this, channelId);
-            d->channelHandlers[channelId] = handler;
-            handler->sendOpen();
-            return channelId;
+        if (!d->channels.contains(channelId)) {
+            QSharedPointer<Channel> handler(new Channel(this, channelId));
+            d->channels[channelId] = handler;
+            return handler.staticCast<Channel>();
         }
     }
-    qWarning() << "No free channel available to open channel";
-    return -1;
+    qWarning() << "No free channel id available to create channel";
+    return nullptr;
 }
 
 void Client::onSocketSslErrors(const QList<QSslError> &errors)
 {
 #warning(TODO)
-    qDebug() << "SSL errors" << errors;
+    qWarning() << "SSL errors" << errors;
 }
 
 bool Client::sendHeartbeat()
