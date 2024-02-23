@@ -109,6 +109,9 @@ bool ConnectionHandler::sendOpen()
 bool ConnectionHandler::onOpenOk(const MethodFrame *frame)
 {
     qDebug() << "OpenOk";
+    emit this->connectionOpened();
+
+    // m_client->sendHeartbeat();
     return true;
 }
 

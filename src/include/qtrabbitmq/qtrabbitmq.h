@@ -25,7 +25,9 @@ enum class FieldValue : char {
     Invalid = 0
 };
 
-enum class FrameType { Method = 1, Header = 2, Body = 3, Heartbeat = 4, Invalid = 0 };
+// Note that these must match the spec constants.
+// Beware that the frame type for heartbeat is 8 (FrameHeartbeat, as defined in the constants section of the spec) and not 4.
+enum class FrameType { Method = 1, Header = 2, Body = 3, Heartbeat = 8, Invalid = 0 };
 
 enum class BasicProperty {
     ContentType = 0,     // shortstr MIME content type

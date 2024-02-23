@@ -9,6 +9,7 @@
 #include <QScopedPointer>
 #include <QSharedPointer>
 #include <QSslError>
+#include <QString>
 
 namespace qmq {
 class Client : public QObject
@@ -32,7 +33,10 @@ public Q_SLOTS:
     bool sendFrame(const Frame *f);
     bool sendHeartbeat();
 
-    void disconnectFromHost();
+    void disconnectFromHost(qint16 code = 200,
+                            const QString &replyText = QString(),
+                            quint16 classId = 0,
+                            quint16 methodId = 0);
 
 protected Q_SLOTS:
     void onSocketConnected();

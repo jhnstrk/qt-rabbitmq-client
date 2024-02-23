@@ -44,6 +44,10 @@ Client::Client(QObject *parent)
     , d(new Private)
 {
     d->connection.reset(new detail::ConnectionHandler(this));
+    connect(d->connection.data(),
+            &detail::ConnectionHandler::connectionOpened,
+            this,
+            &Client::connected);
 }
 
 Client::~Client()
@@ -127,7 +131,7 @@ void Client::onSocketReadyRead()
     ErrorCode errCode = qmq::ErrorCode::NoError;
     QScopedPointer<Frame> frame(Frame::readFrame(d->socket, maxFrameSize, &errCode));
     if (frame) {
-        qDebug() << "Read frame" << (int) frame->type();
+        qDebug() << "Read frame with type=" << (int) frame->type();
     } else {
         qDebug() << "No frame" << (int) errCode << d->socket->bytesAvailable();
         return;
@@ -172,12 +176,16 @@ void Client::onSocketReadyRead()
 #warning(TODO)
 }
 
-void Client::disconnectFromHost()
+void Client::disconnectFromHost(qint16 code,
+                                const QString &replyText,
+                                quint16 classId,
+                                quint16 methodId)
 {
     if (!d->socket) {
         qWarning() << "Already disconnected";
         return;
     }
+    d->connection->sendClose(code, replyText, classId, methodId);
     d->socket->disconnectFromHost();
 }
 

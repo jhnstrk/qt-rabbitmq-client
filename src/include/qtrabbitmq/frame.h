@@ -138,7 +138,7 @@ class HeartbeatFrame : public Frame
 {
 public:
     HeartbeatFrame()
-        : Frame(qmq::FrameType::Heartbeat)
+        : Frame(qmq::FrameType::Heartbeat, 0)
     {}
 
     static QScopedPointer<HeartbeatFrame> fromContent(quint16 channel, const QByteArray &content);

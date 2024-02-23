@@ -1,24 +1,31 @@
 #pragma once
 
 #include "qtrabbitmq/abstract_method_handler.h"
+
+#include <QObject>
 #include <qglobal.h>
 
 namespace qmq {
 class Client;
 
 namespace detail {
-class ConnectionHandler : public AbstractMethodHandler
+class ConnectionHandler : public QObject, public AbstractMethodHandler
 {
+    Q_OBJECT
 public:
     ConnectionHandler(Client *client);
     bool handleFrame(const MethodFrame *frame) override;
+
+    bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
+
+Q_SIGNALS:
+    void connectionOpened();
 
 protected:
     bool sendStartOk();
     bool sendTuneOk();
 
     bool sendOpen();
-    bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
     bool onOpenOk(const MethodFrame *frame);
     bool onClose(const MethodFrame *frame);
     bool sendCloseOk();

@@ -746,6 +746,8 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
 {
     if (io->bytesAvailable() < (FrameHeaderSize + 1)) {
         *err = ErrorCode::InsufficientDataAvailable;
+        qDebug() << "Cannot read frame; waiting for more data, available bytes:"
+                 << io->bytesAvailable();
         return QScopedPointer<qmq::Frame>();
     }
 
@@ -761,6 +763,7 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
 
     if (maxFrameSize != 0 && size > maxFrameSize) {
         *err = ErrorCode::FrameTooLarge;
+        qWarning() << "Frame too large" << size;
         return QScopedPointer<qmq::Frame>();
     }
     if (io->bytesAvailable() < (size + FrameHeaderSize + 1)) {
@@ -774,6 +777,8 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
     const QByteArray content = io->read((size));
     if (content.size() != (size)) {
         *err = ErrorCode::IoError;
+        qWarning() << "Read finished before frame completed. read:" << content.size()
+                   << "expected:" << size;
         return QScopedPointer<qmq::Frame>();
     }
 
@@ -781,8 +786,11 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
     const quint8 endByte = readAmqp<quint8>(io, &ok);
     if (!ok || endByte != FrameEndChar) {
         *err = ErrorCode::InvalidFrameData;
+        qWarning() << "Frame end byte invalid or could not be read" << (int) endByte << (ok);
         return QScopedPointer<qmq::Frame>();
     }
+    qDebug() << ":Frame::readFrame Construct frame from data. channel:" << channel
+             << "content size:" << size;
     switch (t) {
     case qmq::FrameType::Method:
         return QScopedPointer<qmq::Frame>(MethodFrame::fromContent(channel, content).take());
@@ -794,13 +802,14 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
         return QScopedPointer<qmq::Frame>(HeartbeatFrame::fromContent(channel, content).take());
     default:
         *err = ErrorCode::UnknownFrameType;
+        qWarning() << "Unknown frame type";
         return QScopedPointer<qmq::Frame>();
     }
 }
 
 bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
 {
-    qDebug() << "Write frame" << f->channel() << (int) f->type();
+    qDebug() << "Writing frame to channel" << f->channel() << "with type=" << (int) f->type();
     const QByteArray content = f->content();
 
     const quint8 t = static_cast<quint8>(f->type());
@@ -816,7 +825,7 @@ bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
     ok = ok && writeAmqp<quint32>(io, size);
     ok = ok && (io->write(content) == content.size());
     ok = ok && writeAmqp<quint8>(io, FrameEndChar);
-    qDebug() << "Write frame" << ok << size;
+    qDebug() << "Written frame" << (ok ? "OK" : "FAILED") << "with size" << size;
     return ok;
 }
 

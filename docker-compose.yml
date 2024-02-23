@@ -12,6 +12,7 @@ services:
     volumes:
         - rabbitmq_data:/var/lib/rabbitmq/
         - rabbitmq_log:/var/log/rabbitmq
+        - ./docker/20-logging.conf:/etc/rabbitmq/conf.d/20-logging.conf:ro
     networks:
         - qmqnet
 
