@@ -10,7 +10,6 @@ set(QMQ_SOURCES_CPP
   client.cpp
   connection_handler.cpp
   decimal.cpp
-  exchange_handler.cpp
   frame.cpp
   qtrabbitmq.cpp
   spec_constants.cpp
@@ -21,7 +20,7 @@ set(QMQ_HEADERS_MOC
 
 set(QMQ_HEADERS
   ../include/qtrabbitmq/qtrabbitmq.h
-  ../include/qtrabbitmq/abstract_method_handler.h
+  ../include/qtrabbitmq/abstract_frame_handler.h
   ../include/qtrabbitmq/authentication.h
   ../include/qtrabbitmq/client.h
   ../include/qtrabbitmq/channel.h
@@ -29,7 +28,6 @@ set(QMQ_HEADERS
   ../include/qtrabbitmq/frame.h
   ../include/qtrabbitmq/message.h
   connection_handler.h
-  exchange_handler.h
   spec_constants.h
 )
 

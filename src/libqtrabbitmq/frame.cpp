@@ -17,13 +17,14 @@ T readAmqp(QIODevice *io, bool *ok)
     char buffer[N];
     if (io->read(buffer, N) != N) {
         qCritical() << "Error reading value";
-        if (ok)
+        if (ok != nullptr)
             *ok = false;
         return T();
     };
-    if (ok)
+    if (ok != nullptr) {
         *ok = true;
-    return qFromBigEndian<T>(buffer);
+    }
+    return qFromBigEndian<T>(static_cast<char *>(buffer));
 }
 
 template<typename T>
@@ -32,12 +33,14 @@ QVariant readAmqpVariant(QIODevice *io, bool *ok)
     bool isOk = false;
     const T value = readAmqp<T>(io, &isOk);
     if (isOk) {
-        if (ok)
+        if (ok != nullptr) {
             *ok = true;
+        }
         return QVariant::fromValue<T>(value);
     }
-    if (ok)
+    if (ok != nullptr) {
         *ok = false;
+    }
     return QVariant();
 }
 
@@ -46,8 +49,8 @@ bool writeAmqp(QIODevice *io, T value)
 {
     const int N = sizeof(T);
     char buffer[N];
-    qToBigEndian<T>(value, buffer);
-    if (io->write(buffer, N) != N) {
+    qToBigEndian<T>(value, static_cast<char *>(buffer));
+    if (io->write(static_cast<char *>(buffer), N) != N) {
         qCritical() << "Error writing value";
         return false;
     };
@@ -69,12 +72,13 @@ bool readAmqpBool(QIODevice *io, bool *ok)
     char buffer[1];
     if (io->read(buffer, 1) != 1) {
         qCritical() << "Error reading value";
-        if (ok)
+        if (ok != nullptr)
             *ok = false;
         return false;
     };
-    if (ok)
+    if (ok != nullptr) {
         *ok = true;
+    }
     return buffer[0] != 0;
 }
 
@@ -87,8 +91,9 @@ QVariant readAmqpVariantBool(QIODevice *io, bool *ok)
 {
     bool isOk;
     const bool v = readAmqpBool(io, &isOk);
-    if (ok)
+    if (ok != nullptr) {
         *ok = isOk;
+    }
     if (isOk) {
         return QVariant::fromValue(v);
     }
@@ -100,29 +105,31 @@ qmq::Decimal readAmqpDecimal(QIODevice *io, bool *ok)
     char buffer[5];
     if (io->read(buffer, 5) != 5) {
         qCritical() << "Error reading value";
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return qmq::Decimal();
     };
     const quint8 scale = static_cast<quint8>(buffer[0]);
-    const quint32 value = qFromBigEndian<quint32>(buffer + 1);
-    if (ok)
+    const qint32 value = qFromBigEndian<qint32>(buffer + 1);
+    if (ok != nullptr) {
         *ok = true;
+    }
     return qmq::Decimal(scale, value);
 }
 
 bool writeAmqpDecimal(QIODevice *io, const qmq::Decimal &value)
 {
-    return writeAmqp<quint8>(io, quint8(value.scale))
-           && writeAmqp<quint32>(io, quint32(value.value));
+    return writeAmqp<quint8>(io, quint8(value.scale)) && writeAmqp<qint32>(io, qint32(value.value));
 }
 
 QVariant readAmqpVariantDecimal(QIODevice *io, bool *ok)
 {
     bool isOk;
     const qmq::Decimal v = readAmqpDecimal(io, &isOk);
-    if (ok)
+    if (ok != nullptr) {
         *ok = isOk;
+    }
     if (isOk) {
         return QVariant::fromValue<qmq::Decimal>(v);
     }
@@ -144,21 +151,24 @@ QByteArray readAmqpShortString(QIODevice *io, bool *ok)
     const quint8 len = readAmqp<quint8>(io, &isOk);
     if (!isOk) {
         qCritical() << "Error reading length";
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return QByteArray();
     };
     QByteArray buffer;
     buffer.resize(len);
     if (io->read(buffer.data(), buffer.size()) != len) {
         qCritical() << "Error reading value";
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return QByteArray();
     }
 
-    if (ok)
+    if (ok != nullptr) {
         *ok = true;
+    }
     return buffer;
 }
 
@@ -189,8 +199,9 @@ QVariant readAmqpVariantShortString(QIODevice *io, bool *ok)
 {
     bool isOk;
     const QByteArray v = readAmqpShortString(io, &isOk);
-    if (ok)
+    if (ok != nullptr) {
         *ok = isOk;
+    }
     if (isOk) {
         return QVariant::fromValue(QString::fromUtf8(v));
     }
@@ -212,24 +223,26 @@ bool writeAmqpVariantShortString(QIODevice *io, const QVariant &value)
 QByteArray readAmqpLongString(QIODevice *io, bool *ok)
 {
     char lenBuf[4];
-    if (io->read(lenBuf, 4) != 4) {
+    if (io->read(static_cast<char *>(lenBuf), 4) != 4) {
         qCritical() << "Error reading length";
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return QByteArray();
     };
-    const quint32 len = qFromBigEndian<quint32>(lenBuf);
+    const quint32 len = qFromBigEndian<quint32>(static_cast<char *>(lenBuf));
     QByteArray buffer;
     buffer.resize(len);
     if (io->read(buffer.data(), buffer.size()) != len) {
         qCritical() << "Error reading value";
-        if (ok)
+        if (ok != nullptr)
             *ok = false;
         return QByteArray();
     }
 
-    if (ok)
+    if (ok != nullptr) {
         *ok = true;
+    }
     return buffer;
 }
 
@@ -256,8 +269,9 @@ QVariant readAmqpVariantLongString(QIODevice *io, bool *ok)
 {
     bool isOk;
     const QByteArray v = readAmqpLongString(io, &isOk);
-    if (ok)
+    if (ok != nullptr) {
         *ok = isOk;
+    }
     if (isOk) {
         return QVariant::fromValue(v);
     }
@@ -284,13 +298,14 @@ QVariantList readAmqpVariantFieldArray(QIODevice *io, bool *ok)
     bool isOk = true;
     const quint32 len = readAmqp<quint32>(io, &isOk);
     if (!isOk) {
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return QVariantList();
     }
     QByteArray packedData = io->read(len);
     if (packedData.size() != len) {
-        if (ok)
+        if (ok != nullptr)
             *ok = false;
         qWarning() << "Attempt to allocate failed" << len;
         return QVariantList();
@@ -304,8 +319,9 @@ QVariantList readAmqpVariantFieldArray(QIODevice *io, bool *ok)
     while (!packedIo.atEnd()) {
         const QVariant nextItem = qmq::Frame::readFieldValue(&packedIo, &isOk);
         if (!isOk) {
-            if (ok)
+            if (ok != nullptr) {
                 *ok = false;
+            }
             return items;
         }
         items.append(nextItem);
@@ -325,8 +341,9 @@ bool writeAmqpFieldArray(QIODevice *io, const QVariantList &value)
 
         for (const QVariant &item : value) {
             bool ok = qmq::Frame::writeFieldValue(&packedIo, item);
-            if (!ok)
+            if (!ok) {
                 return false;
+            }
         }
     }
     const quint32 len = packedBuffer.size();
@@ -369,14 +386,16 @@ QVariantHash readAmqpVariantFieldTable(QIODevice *io, bool *ok)
     bool isOk = true;
     const quint32 len = readAmqp<quint32>(io, &isOk);
     if (!isOk) {
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return QVariantHash();
     }
     QByteArray packedData = io->read(len);
     if (packedData.size() != len) {
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         qWarning() << "Attempt to allocate failed" << len;
         return QVariantHash();
     }
@@ -389,14 +408,16 @@ QVariantHash readAmqpVariantFieldTable(QIODevice *io, bool *ok)
     while (!packedIo.atEnd()) {
         const QByteArray name = readAmqpShortString(&packedIo, &isOk);
         if (!isOk) {
-            if (ok)
+            if (ok != nullptr) {
                 *ok = false;
+            }
             return items;
         }
         const QVariant nextItem = qmq::Frame::readFieldValue(&packedIo, &isOk);
         if (!isOk) {
-            if (ok)
+            if (ok != nullptr) {
                 *ok = false;
+            }
             return items;
         }
         items[QString::fromUtf8(name)] = nextItem;
@@ -416,11 +437,13 @@ bool writeAmqpFieldTable(QIODevice *io, const QVariantHash &value)
 
         for (auto it = value.constKeyValueBegin(); it != value.constKeyValueEnd(); ++it) {
             bool ok = writeAmqpShortString(&packedIo, it->first);
-            if (!ok)
+            if (!ok) {
                 return false;
+            }
             ok = qmq::Frame::writeFieldValue(&packedIo, it->second);
-            if (!ok)
+            if (!ok) {
                 return false;
+            }
         }
     }
     const quint32 len = packedBuffer.size();
@@ -546,8 +569,9 @@ QVariant qmq::Frame::readFieldValue(QIODevice *io, bool *ok)
     bool isOk;
     const FieldValue type = static_cast<FieldValue>(readAmqp<quint8>(io, &isOk));
     if (!isOk) {
-        if (ok)
+        if (ok != nullptr) {
             *ok = false;
+        }
         return QVariant();
     }
     return readNativeFieldValue(io, type, ok);
@@ -589,8 +613,9 @@ QVariant qmq::Frame::readNativeFieldValue(QIODevice *io, FieldValue type, bool *
     case FieldValue::Timestamp: {
         bool isOk = false;
         const qint64 v = readAmqp<qint64>(io, &isOk);
-        if (ok)
+        if (ok != nullptr) {
             *ok = isOk;
+        }
         if (isOk) {
             return QVariant(QDateTime::fromSecsSinceEpoch(v));
         }
@@ -599,13 +624,14 @@ QVariant qmq::Frame::readNativeFieldValue(QIODevice *io, FieldValue type, bool *
     case FieldValue::FieldTable:
         return readAmqpVariantFieldTable(io, ok);
     case FieldValue::Void:
-        if (ok)
+        if (ok != nullptr) {
             *ok = true;
+        }
         return QVariant(QMetaType(QMetaType::Type::Void));
         break;
     default:
         qWarning() << "Unknown field type" << (int) type;
-        ;
+
         return QVariant();
     }
 }
@@ -638,8 +664,9 @@ QVariantList qmq::Frame::readNativeFieldValues(QIODevice *io,
             ret.push_back(readNativeFieldValue(io, type, &isOk));
         }
     }
-    if (ok)
+    if (ok != nullptr) {
         *ok = isOk;
+    }
     return ret;
 }
 
@@ -652,8 +679,9 @@ bool qmq::Frame::writeFieldValue(QIODevice *io, const QVariant &value)
 bool qmq::Frame::writeFieldValue(QIODevice *io, const QVariant &value, FieldValue valueType)
 {
     const bool ok = writeAmqp<quint8>(io, static_cast<quint8>(valueType));
-    if (!ok)
+    if (!ok) {
         return false;
+    }
 
     return writeNativeFieldValue(io, value, valueType);
 }
@@ -728,48 +756,52 @@ bool qmq::Frame::writeNativeFieldValues(QIODevice *io,
         if ((bitPos == 8)
             || (bitPos > 0 && ((type != FieldValue::Bit) || (i == types.size() - 1)))) {
             ok = writeAmqp<quint8>(io, bitBuffer);
-            if (!ok)
+            if (!ok) {
                 return false;
+            }
             bitBuffer = 0;
             bitPos = 0;
         }
         if (type != FieldValue::Bit) {
             ok = writeNativeFieldValue(io, value, type);
         }
-        if (!ok)
+        if (!ok) {
             return false;
+        }
     }
     return ok;
 }
 
-QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err)
+std::unique_ptr<qmq::Frame> qmq::Frame::readFrame(QIODevice *io,
+                                                  quint32 maxFrameSize,
+                                                  ErrorCode *err)
 {
     if (io->bytesAvailable() < (FrameHeaderSize + 1)) {
         *err = ErrorCode::InsufficientDataAvailable;
         qDebug() << "Cannot read frame; waiting for more data, available bytes:"
                  << io->bytesAvailable();
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
 
     const int headerLen = FrameHeaderSize;
     char header[headerLen];
     if (io->peek(header, headerLen) != headerLen) {
         qWarning() << "peek failed";
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
     const FrameType t = static_cast<FrameType>(header[0]);
-    const quint16 channel = qFromBigEndian<quint16>(header + 1);
-    const quint32 size = qFromBigEndian<quint32>(header + 3);
+    const quint16 channel = qFromBigEndian<quint16>(static_cast<const char *>(header) + 1);
+    const quint32 size = qFromBigEndian<quint32>(static_cast<const char *>(header) + 3);
 
     if (maxFrameSize != 0 && size > maxFrameSize) {
         *err = ErrorCode::FrameTooLarge;
         qWarning() << "Frame too large" << size;
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
     if (io->bytesAvailable() < (size + FrameHeaderSize + 1)) {
         qDebug() << "InsufficientDataAvailable" << io->bytesAvailable() << size << FrameHeaderSize;
         *err = ErrorCode::InsufficientDataAvailable;
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
 
     io->skip(FrameHeaderSize);
@@ -779,7 +811,7 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
         *err = ErrorCode::IoError;
         qWarning() << "Read finished before frame completed. read:" << content.size()
                    << "expected:" << size;
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
 
     bool ok;
@@ -787,23 +819,23 @@ QScopedPointer<qmq::Frame> qmq::Frame::readFrame(QIODevice *io, quint32 maxFrame
     if (!ok || endByte != FrameEndChar) {
         *err = ErrorCode::InvalidFrameData;
         qWarning() << "Frame end byte invalid or could not be read" << (int) endByte << (ok);
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
     qDebug() << ":Frame::readFrame Construct frame from data. channel:" << channel
              << "content size:" << size;
     switch (t) {
     case qmq::FrameType::Method:
-        return QScopedPointer<qmq::Frame>(MethodFrame::fromContent(channel, content).take());
+        return std::unique_ptr<qmq::Frame>(MethodFrame::fromContent(channel, content).release());
     case qmq::FrameType::Header:
-        return QScopedPointer<qmq::Frame>(HeaderFrame::fromContent(channel, content).take());
+        return std::unique_ptr<qmq::Frame>(HeaderFrame::fromContent(channel, content).release());
     case qmq::FrameType::Body:
-        return QScopedPointer<qmq::Frame>(BodyFrame::fromContent(channel, content).take());
+        return std::unique_ptr<qmq::Frame>(BodyFrame::fromContent(channel, content).release());
     case qmq::FrameType::Heartbeat:
-        return QScopedPointer<qmq::Frame>(HeartbeatFrame::fromContent(channel, content).take());
+        return std::unique_ptr<qmq::Frame>(HeartbeatFrame::fromContent(channel, content).release());
     default:
         *err = ErrorCode::UnknownFrameType;
         qWarning() << "Unknown frame type";
-        return QScopedPointer<qmq::Frame>();
+        return std::unique_ptr<qmq::Frame>();
     }
 }
 
@@ -829,13 +861,13 @@ bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
     return ok;
 }
 
-QScopedPointer<qmq::BodyFrame> qmq::BodyFrame::fromContent(quint16 channel,
-                                                           const QByteArray &content)
+std::unique_ptr<qmq::BodyFrame> qmq::BodyFrame::fromContent(quint16 channel,
+                                                            const QByteArray &content)
 {
-    return QScopedPointer<qmq::BodyFrame>(new BodyFrame(channel, content));
+    return std::unique_ptr<qmq::BodyFrame>(new BodyFrame(channel, content));
 }
-QScopedPointer<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
-                                                               const QByteArray &content)
+std::unique_ptr<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
+                                                                const QByteArray &content)
 {
     QBuffer io;
     io.setData(content);
@@ -843,7 +875,7 @@ QScopedPointer<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
     const quint16 classId = readAmqp<quint16>(&io, &ok);
     const quint16 methodId = readAmqp<quint16>(&io, &ok);
     const QByteArray arguments = content.mid(4);
-    return QScopedPointer<qmq::MethodFrame>(new MethodFrame(channel, classId, methodId, arguments));
+    return std::unique_ptr<qmq::MethodFrame>(new MethodFrame(channel, classId, methodId, arguments));
 }
 
 QByteArray qmq::MethodFrame::content() const
@@ -879,22 +911,88 @@ bool qmq::MethodFrame::setArguments(const QVariantList &values)
     }
     QBuffer io;
     bool ok = io.open(QIODevice::WriteOnly);
-    if (!ok)
+    if (!ok) {
         return false;
+    }
     ok = Frame::writeNativeFieldValues(&io, values, types);
     io.close();
     this->m_arguments = io.buffer();
     return ok;
 }
 
-QScopedPointer<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
-                                                               const QByteArray &content)
+qmq::HeaderFrame::HeaderFrame(quint16 channel,
+                              quint16 classId,
+                              quint64 contentSize,
+                              const QHash<qmq::BasicProperty, QVariant> &properties)
+    : Frame(qmq::FrameType::Header, channel)
+    , m_classId(classId)
+    , m_contentSize(contentSize)
+    , m_properties(properties)
+{}
+
+std::unique_ptr<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
+                                                                const QByteArray &content)
 {
-    return QScopedPointer<qmq::HeaderFrame>(new HeaderFrame(channel));
+    QBuffer io;
+    io.setData(content);
+    bool ok = io.open(QIODevice::ReadOnly);
+    const quint16 classId = readAmqp<quint16>(&io, &ok);
+    const quint16 weight = readAmqp<quint16>(&io, &ok);
+    const quint64 contentSize = readAmqp<quint64>(&io, &ok);
+    const quint16 propertyFlags = readAmqp<quint16>(&io, &ok);
+    if (!ok) {
+        qWarning() << "Buffer not opened";
+        return std::unique_ptr<qmq::HeaderFrame>();
+    }
+
+    QHash<BasicProperty, QVariant> properties;
+    for (unsigned int i = 0; i < std::size(spec::basicPropertyTypes); ++i) {
+        if ((propertyFlags & ((1 << 15) >> i)) != 0) {
+            const FieldValue propType = spec::basicPropertyTypes[i];
+            const QVariant value = Frame::readNativeFieldValue(&io, propType, &ok);
+            const BasicProperty propId = static_cast<BasicProperty>(i);
+            properties.insert(propId, value);
+        }
+    }
+
+    return std::unique_ptr<qmq::HeaderFrame>(
+        new HeaderFrame(channel, classId, contentSize, properties));
 }
 
-QScopedPointer<qmq::HeartbeatFrame> qmq::HeartbeatFrame::fromContent(quint16 channel,
-                                                                     const QByteArray &content)
+QByteArray qmq::HeaderFrame::content() const
+{
+    QList<BasicProperty> proplist(m_properties.keys());
+    std::sort(proplist.begin(), proplist.end());
+
+    quint16 propertyFlags = 0;
+    QVariantList orderedValues;
+    QList<FieldValue> orderedTypes;
+    orderedValues.reserve(m_properties.size());
+    orderedTypes.reserve(m_properties.size());
+
+    for (BasicProperty it : proplist) {
+        const int itIndex = (int) it;
+        propertyFlags |= ((1 << 15) >> itIndex); // High bit comes first.
+        orderedValues.push_back(m_properties.value(it));
+        orderedTypes.push_back(spec::basicPropertyTypes[itIndex]);
+    }
+    QBuffer io;
+    bool ok = io.open(QIODevice::WriteOnly);
+    if (!ok) {
+        qWarning() << "Buffer not opened";
+        return QByteArray();
+    }
+    ok = writeAmqp<quint16>(&io, this->classId());
+    ok = writeAmqp<quint16>(&io, 0); // weight.
+    ok = writeAmqp<quint64>(&io, this->contentSize());
+    ok = writeAmqp<quint16>(&io, propertyFlags);
+    ok = Frame::writeNativeFieldValues(&io, orderedValues, orderedTypes);
+    io.close();
+    return io.buffer();
+}
+
+std::unique_ptr<qmq::HeartbeatFrame> qmq::HeartbeatFrame::fromContent(quint16 channel,
+                                                                      const QByteArray &content)
 {
     if (channel != 0) {
         qWarning() << "Hearbeat frame non-zero channel";
@@ -902,5 +1000,5 @@ QScopedPointer<qmq::HeartbeatFrame> qmq::HeartbeatFrame::fromContent(quint16 cha
     if (!content.isEmpty()) {
         qWarning() << "Hearbeat frame has unexpected content, which has been discarded";
     }
-    return QScopedPointer<qmq::HeartbeatFrame>(new HeartbeatFrame());
+    return std::unique_ptr<qmq::HeartbeatFrame>(new HeartbeatFrame());
 }

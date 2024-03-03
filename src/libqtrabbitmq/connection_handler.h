@@ -1,6 +1,6 @@
 #pragma once
 
-#include "qtrabbitmq/abstract_method_handler.h"
+#include "qtrabbitmq/abstract_frame_handler.h"
 
 #include <QObject>
 #include <qglobal.h>
@@ -9,12 +9,15 @@ namespace qmq {
 class Client;
 
 namespace detail {
-class ConnectionHandler : public QObject, public AbstractMethodHandler
+class ConnectionHandler : public QObject, public AbstractFrameHandler
 {
     Q_OBJECT
 public:
     ConnectionHandler(Client *client);
-    bool handleFrame(const MethodFrame *frame) override;
+    bool handleMethodFrame(const MethodFrame *frame) override;
+    bool handleHeaderFrame(const HeaderFrame *frame) override {}
+    bool handleBodyFrame(const BodyFrame *frame) override {}
+    bool handleHeartbeatFrame(const HeartbeatFrame *frame) override {}
 
     bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 

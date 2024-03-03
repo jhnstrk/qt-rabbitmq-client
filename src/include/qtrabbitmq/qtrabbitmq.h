@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QByteArray>
+
 namespace qmq {
 
 enum class FieldValue : char {
@@ -45,4 +47,6 @@ enum class BasicProperty {
     AppId = 12,          // shortstr creating application id
     _ClusterId = 13,     // shortstr reserved, must be empty
 };
+
+QByteArray basicPropertyName(BasicProperty p);
 } // namespace qmq

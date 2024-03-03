@@ -13,7 +13,7 @@ ConnectionHandler::ConnectionHandler(Client *client)
     : m_client(client)
 {}
 
-bool ConnectionHandler::handleFrame(const MethodFrame *frame)
+bool ConnectionHandler::handleMethodFrame(const MethodFrame *frame)
 {
     Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::spec::connection::ID_));
     switch (frame->methodId()) {

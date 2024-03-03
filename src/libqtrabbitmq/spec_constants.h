@@ -4,6 +4,8 @@
 #include <qglobal.h>
 #include <qtrabbitmq/qtrabbitmq.h>
 
+#include <QList>
+
 namespace qmq {
 
 namespace spec {
@@ -102,6 +104,22 @@ constexpr const int InternalError = 541;
 
 QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId);
 
+constexpr qmq::FieldValue basicPropertyTypes[] = {
+    domain::ShortStr,  // ContentType = 0,     // shortstr MIME content type
+    domain::ShortStr,  // ContentEncoding = 1, // shortstr MIME content encoding
+    domain::Table,     // Headers = 2,         // table message header field table
+    domain::Octet,     // DeliveryMode = 3,    // octet nonpersistent (1) or persistent (2)
+    domain::Octet,     // Priority = 4,        // octet message priority, 0 to 9
+    domain::ShortStr,  // CorrelationId = 5,   // shortstr application correlation identifier
+    domain::ShortStr,  // ReplyTo = 6,         // shortstr address to reply to
+    domain::ShortStr,  // Expiration = 7,      // shortstr message expiration specification
+    domain::ShortStr,  // MessageId = 8,       // shortstr application message identifier
+    domain::Timestamp, // Timestamp = 9,       // timestamp message timestamp
+    domain::ShortStr,  // Type = 10,           // shortstr message type name
+    domain::ShortStr,  // UserId = 11,         // shortstr creating user id
+    domain::ShortStr,  // AppId = 12,          // shortstr creating application id
+    domain::ShortStr,  //_ClusterId = 13,     // shortstr reserved, must be empty
+};
 } // namespace spec
 
 } // namespace qmq

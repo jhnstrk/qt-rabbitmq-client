@@ -4,7 +4,8 @@
 #include <QObject>
 #include <QScopedPointer>
 
-#include "abstract_method_handler.h"
+#include "abstract_frame_handler.h"
+#include "message.h"
 
 namespace qmq {
 class Client;
@@ -27,11 +28,13 @@ struct DeclareQueueOptions
     QVariantHash arguments;
 };
 
-class Channel : public QObject, public AbstractMethodHandler
+class Channel : public QObject, public AbstractFrameHandler
 {
     Q_OBJECT
 public:
-    enum class ExchangeType { Fanout, Direct, Topic, Headers };
+    // Types defined by Rabbit: https://www.rabbitmq.com/tutorials/amqp-concepts.html
+    enum class ExchangeType { Invalid, Direct, Fanout, Topic, Match, Headers = Match };
+
     explicit Channel(Client *client, qint16 channelId);
     virtual ~Channel();
 
@@ -51,7 +54,15 @@ public:
                                const DeclareQueueOptions &opts = DeclareQueueOptions());
     QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
 
-    virtual bool handleFrame(const MethodFrame *frame) override;
+    QFuture<void> consume(const QString &queueName);
+
+    bool sendAck(qlonglong deliveryTag, bool muliple);
+    bool handleMethodFrame(const MethodFrame *frame) override;
+    bool handleHeaderFrame(const HeaderFrame *frame) override;
+    bool handleBodyFrame(const BodyFrame *frame) override;
+    bool handleHeartbeatFrame(const HeartbeatFrame *frame) override {}
+
+    QFuture<void> publish(const QString &exchangeName, const qmq::Message &message);
 
 protected:
     bool onOpenOk(const MethodFrame *frame);
@@ -61,6 +72,10 @@ protected:
     bool onQueueDeclareOk(const MethodFrame *frame);
     bool onQueueBindOk(const MethodFrame *frame);
 
+    bool onBasicConsumeOk(const MethodFrame *frame);
+    bool onBasicDeliver(const MethodFrame *frame);
+
+    void incomingMessageComplete();
 public Q_SLOTS:
 
 protected Q_SLOTS:

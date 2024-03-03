@@ -7,8 +7,15 @@
 #include <QtTest>
 
 namespace {
-const int smallWaitMs = 1000;
+const int smallWaitMs = 5000;
+const QUrl testUrl("amqp://rabbit:rabbit@localhost:5672/");
+
+bool waitForFuture(const QFuture<void> &fut, int waitTimeMs = smallWaitMs)
+{
+    return QTest::qWaitFor([&]() -> bool { return fut.isFinished(); }, waitTimeMs);
 }
+} // namespace
+
 class RmqConnectTest : public QObject
 {
     Q_OBJECT
@@ -50,6 +57,53 @@ private slots:
         }
 
         client.disconnectFromHost();
+        QTest::qWait(smallWaitMs);
+    }
+
+    void testPubSub()
+    {
+        qmq::Client pubClient;
+        QSignalSpy pubSpy(&pubClient, &qmq::Client::connected);
+        pubClient.connectToHost(testUrl);
+        QVERIFY(pubSpy.wait(smallWaitMs));
+        auto pubChannel = pubClient.createChannel();
+
+        QVERIFY(waitForFuture(pubChannel->openChannel()));
+
+        const QString exchangeName = "my-messages";
+        const QString queueName = "my-queue";
+        QVERIFY(waitForFuture(
+            pubChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(pubChannel->declareQueue(queueName)));
+
+        qmq::Client subClient;
+        QSignalSpy subSpy(&subClient, &qmq::Client::connected);
+        subClient.connectToHost(testUrl);
+        QVERIFY(subSpy.wait(smallWaitMs));
+        auto subChannel = subClient.createChannel();
+
+        QVERIFY(waitForFuture(subChannel->openChannel()));
+        QVERIFY(waitForFuture(
+            subChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(subChannel->declareQueue(queueName)));
+        QVERIFY(waitForFuture(subChannel->bindQueue(queueName, exchangeName)));
+        QVERIFY(waitForFuture(subChannel->consume(queueName)));
+
+        qmq::Message msg;
+        msg.setProperty(qmq::BasicProperty::ContentType, "text.plain");
+        msg.setProperty(qmq::BasicProperty::ContentEncoding, "utf-8");
+        msg.setPayload("Hello World");
+
+        QVERIFY(waitForFuture(pubChannel->publish(exchangeName, msg)));
+
+        QTest::qWait(5000);
+        qDebug() << "delivered?";
+
+        QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
+
+        pubClient.disconnectFromHost();
+        subClient.disconnectFromHost();
         QTest::qWait(smallWaitMs);
     }
 

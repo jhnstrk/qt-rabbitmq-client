@@ -6,8 +6,9 @@
 #include <QIODevice>
 #include <QList>
 #include <QMetaType>
-#include <QScopedPointer>
 #include <QVariant>
+
+#include <memory>
 
 namespace qmq {
 
@@ -45,7 +46,7 @@ public:
                                        const QList<FieldValue> &valueTypes);
 
     //! maxFrameSize of 0 is treated as unlimited.
-    static QScopedPointer<Frame> readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
+    static std::unique_ptr<Frame> readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
     static bool writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f);
 
     //! Note that bit type isn't handled here.
@@ -68,7 +69,7 @@ private:
 class MethodFrame : public Frame
 {
 public:
-    static QScopedPointer<MethodFrame> fromContent(quint16 channel, const QByteArray &content);
+    static std::unique_ptr<MethodFrame> fromContent(quint16 channel, const QByteArray &content);
 
     quint16 classId() const { return m_classId; }
     quint16 methodId() const { return m_methodId; }
@@ -102,24 +103,38 @@ private:
 class HeaderFrame : public Frame
 {
 public:
-    static QScopedPointer<HeaderFrame> fromContent(quint16 channel, const QByteArray &content);
+    HeaderFrame(quint16 channel,
+                quint16 classId,
+                quint64 contentSize,
+                const QHash<qmq::BasicProperty, QVariant> &properties);
+    static std::unique_ptr<HeaderFrame> fromContent(quint16 channel, const QByteArray &content);
 
-    QByteArray body() const { return m_body; }
-    void setBody(const QByteArray &body) { m_body = body; }
+    QByteArray content() const override;
 
-    QByteArray content() const override { return m_body; }
+    void setProperties(const QHash<qmq::BasicProperty, QVariant> &properties)
+    {
+        m_properties = properties;
+    };
+    const QHash<qmq::BasicProperty, QVariant> &properties() const { return m_properties; };
+
+    quint16 classId() const { return m_classId; }
+    quint64 contentSize() const { return m_contentSize; }
 
 private:
-    HeaderFrame(quint16 channel)
-        : Frame(qmq::FrameType::Header, channel)
-    {}
-    QByteArray m_body;
+    quint16 m_classId = 0;
+    quint64 m_contentSize = 0;
+    QHash<qmq::BasicProperty, QVariant> m_properties;
 };
 
 class BodyFrame : public Frame
 {
 public:
-    static QScopedPointer<BodyFrame> fromContent(quint16 channel, const QByteArray &content);
+    BodyFrame(quint16 channel, const QByteArray &body)
+        : Frame(qmq::FrameType::Body, channel)
+        , m_body(body)
+    {}
+
+    static std::unique_ptr<BodyFrame> fromContent(quint16 channel, const QByteArray &content);
 
     QByteArray body() const { return m_body; }
     void setBody(const QByteArray &body) { m_body = body; }
@@ -127,10 +142,6 @@ public:
     QByteArray content() const override { return m_body; }
 
 private:
-    BodyFrame(quint16 channel, const QByteArray &body)
-        : Frame(qmq::FrameType::Body, channel)
-        , m_body(body)
-    {}
     QByteArray m_body;
 };
 
@@ -141,7 +152,7 @@ public:
         : Frame(qmq::FrameType::Heartbeat, 0)
     {}
 
-    static QScopedPointer<HeartbeatFrame> fromContent(quint16 channel, const QByteArray &content);
+    static std::unique_ptr<HeartbeatFrame> fromContent(quint16 channel, const QByteArray &content);
 
     QByteArray content() const override { return QByteArray(); }
 
