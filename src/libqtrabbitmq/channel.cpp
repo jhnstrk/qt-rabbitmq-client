@@ -1,6 +1,7 @@
 #include "spec_constants.h"
 #include <qtrabbitmq/channel.h>
 #include <qtrabbitmq/client.h>
+#include <qtrabbitmq/consumer.h>
 #include <qtrabbitmq/exception.h>
 
 #include <QUuid>
@@ -48,7 +49,7 @@ struct IncomingMessage
     quint64 m_contentSize = 0;
     QByteArray m_payload;
     QString m_consumerTag;
-    qlonglong m_deliveryTag = 0;
+    qint64 m_deliveryTag = 0;
     bool m_redelivered = false;
     QString m_exchangeName;
     QString m_routingKey;
@@ -78,6 +79,7 @@ public:
     Client *client = nullptr;
     QList<MessageItemPtr> inFlightMessages;
     QScopedPointer<IncomingMessage> deliveringMessage;
+    QHash<QString, QPointer<Consumer>> consumers;
 };
 
 Channel::Channel(Client *client, qint16 channelId)
@@ -372,18 +374,33 @@ bool Channel::onQueueBindOk(const MethodFrame *frame)
     return true;
 }
 
-QFuture<void> Channel::consume(const QString &queueName)
+bool Channel::addConsumer(Consumer *c, const QString &queueName)
+{
+    ConsumeOptions flags;
+    const QString consumerTag = c->consumerTag();
+
+    if (d->consumers.contains(consumerTag)) {
+        qWarning() << "Denying attempt to add duplicate consumer";
+        return false;
+    }
+
+    d->consumers.insert(consumerTag, QPointer<qmq::Consumer>(c));
+    return true;
+}
+
+QFuture<void> Channel::consume(const QString &queueName,
+                               const QString &consumerTag,
+                               ConsumeOptions flags)
 {
     MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Consume);
     MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
 
     // Short, QueueName, ConsumerTag, NoLocal, NoAck, Bit, NoWait, Table
     const short reserved1 = 0;
-    const QString consumerTag = QUuid::createUuid().toString(QUuid::StringFormat::WithoutBraces);
-    const bool noLocal = false;
-    const bool noAck = false;
-    const bool exclusive = false;
-    const bool noWait = false;
+    const bool noLocal = flags.testFlag(ConsumeOption::NoLocal);
+    const bool noAck = flags.testFlag(ConsumeOption::NoAck);
+    const bool exclusive = flags.testFlag(ConsumeOption::Exclusive);
+    const bool noWait = flags.testFlag(ConsumeOption::NoWait);
     const QVariantHash consumeArguments;
     const QVariantList args(
         {reserved1, queueName, consumerTag, noLocal, noAck, exclusive, noWait, consumeArguments});
@@ -454,7 +471,7 @@ QFuture<void> Channel::publish(const QString &exchangeName, const qmq::Message &
     return messageTracker->promise.future();
 }
 
-bool Channel::sendAck(qlonglong deliveryTag, bool muliple)
+bool Channel::sendAck(qint64 deliveryTag, bool muliple)
 {
     MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Ack);
 
@@ -480,7 +497,7 @@ bool Channel::onBasicDeliver(const MethodFrame *frame)
         qWarning() << "Failed to get arguments";
     }
     const QString consumerTag = args.at(0).toString();
-    const qlonglong deliveryTag = args.at(1).toLongLong();
+    const qint64 deliveryTag = args.at(1).toLongLong();
     const bool redelivered = args.at(2).toBool();
     const QString exchangeName = args.at(3).toString();
     const QString routingKey = args.at(4).toString();
@@ -500,8 +517,20 @@ void Channel::incomingMessageComplete()
     qDebug() << "Message complete with delivery tag" << d->deliveringMessage->m_deliveryTag
              << "and size" << d->deliveringMessage->m_payload.size();
     qDebug() << "payload" << QString::fromUtf8(d->deliveringMessage->m_payload);
-    qmq::Message msg(d->deliveringMessage->m_properties, d->deliveringMessage->m_payload);
-    msg.setPayload(d->deliveringMessage->m_payload);
+
+    const QString consumerTag = d->deliveringMessage->m_consumerTag;
+    auto consumerIt = d->consumers.find(consumerTag);
+    if (consumerIt == d->consumers.end()) {
+        qWarning() << "No consumer found for message";
+    }
+    qmq::Message msg(d->deliveringMessage->m_properties,
+                     d->deliveringMessage->m_payload,
+                     d->deliveringMessage->m_routingKey);
+    msg.setDeliveryTag(d->deliveringMessage->m_deliveryTag);
+    msg.setRedelivered(d->deliveringMessage->m_redelivered);
+    msg.setExchangeName(d->deliveringMessage->m_exchangeName);
+
+    consumerIt.value()->pushMessage(msg);
 }
 } // namespace qmq
 

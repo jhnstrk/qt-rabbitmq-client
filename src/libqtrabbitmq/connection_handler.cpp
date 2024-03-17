@@ -53,8 +53,8 @@ bool ConnectionHandler::onStart(const MethodFrame *frame)
 bool ConnectionHandler::sendStartOk()
 {
     AmqpPlainAuthenticator auth;
-    auth.setUsername("rabbituser");
-    auth.setPassword("rabbitpass");
+    auth.setUsername(m_client->username().toUtf8());
+    auth.setPassword(m_client->password().toUtf8());
     QVariantHash clientProperties;
     const QString mechanism = auth.mechanism();
     const QByteArray response = auth.responseBytes("");

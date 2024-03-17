@@ -9,6 +9,7 @@ set(QMQ_SOURCES_CPP
   channel.cpp
   client.cpp
   connection_handler.cpp
+  consumer.cpp
   decimal.cpp
   frame.cpp
   qtrabbitmq.cpp
@@ -24,6 +25,7 @@ set(QMQ_HEADERS
   ../include/qtrabbitmq/authentication.h
   ../include/qtrabbitmq/client.h
   ../include/qtrabbitmq/channel.h
+  ../include/qtrabbitmq/consumer.h
   ../include/qtrabbitmq/decimal.h
   ../include/qtrabbitmq/frame.h
   ../include/qtrabbitmq/message.h

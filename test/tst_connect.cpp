@@ -8,7 +8,7 @@
 
 namespace {
 const int smallWaitMs = 5000;
-const QUrl testUrl("amqp://rabbit:rabbit@localhost:5672/");
+const QUrl testUrl("amqp://rabbituser:rabbitpass@localhost:5672/");
 
 bool waitForFuture(const QFuture<void> &fut, int waitTimeMs = smallWaitMs)
 {
@@ -32,7 +32,7 @@ private slots:
     {
         qmq::Client client;
         QSignalSpy spy(&client, &qmq::Client::connected);
-        client.connectToHost(QUrl("amqp://rabbit:rabbit@localhost:5672/"));
+        client.connectToHost(QUrl(testUrl));
         QVERIFY(spy.wait(smallWaitMs));
 
         auto channel = client.createChannel();
@@ -87,7 +87,10 @@ private slots:
             subChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
         QVERIFY(waitForFuture(subChannel->declareQueue(queueName)));
         QVERIFY(waitForFuture(subChannel->bindQueue(queueName, exchangeName)));
-        QVERIFY(waitForFuture(subChannel->consume(queueName)));
+        //Add consumer
+        qmq::Consumer c;
+        QVERIFY(waitForFuture(c.consume(subChannel.get(), queueName)));
+        QSignalSpy subMessageSpy(&c, &qmq::Consumer::messageReady);
 
         qmq::Message msg;
         msg.setProperty(qmq::BasicProperty::ContentType, "text.plain");
@@ -96,8 +99,9 @@ private slots:
 
         QVERIFY(waitForFuture(pubChannel->publish(exchangeName, msg)));
 
-        QTest::qWait(5000);
-        qDebug() << "delivered?";
+        QVERIFY(subMessageSpy.wait(5000));
+        qmq::Message deliveredMsg = c.dequeueMessage();
+        QCOMPARE(deliveredMsg.payload(), msg.payload());
 
         QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
         QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));

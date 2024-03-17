@@ -5,6 +5,7 @@
 #include <QScopedPointer>
 
 #include "abstract_frame_handler.h"
+#include "consumer.h"
 #include "message.h"
 
 namespace qmq {
@@ -40,6 +41,8 @@ public:
 
     int channelId() const;
 
+    bool addConsumer(Consumer *c, const QString &queueName);
+
     QFuture<void> openChannel();
     QFuture<void> closeChannel(qint16 code,
                                const QString &replyText,
@@ -54,9 +57,19 @@ public:
                                const DeclareQueueOptions &opts = DeclareQueueOptions());
     QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
 
-    QFuture<void> consume(const QString &queueName);
+    enum class ConsumeOption {
+        NoOptions = 0x0,
+        NoLocal = 0x1,
+        NoAck = 0x2,
+        Exclusive = 0x4,
+        NoWait = 0x8,
+    };
+    Q_DECLARE_FLAGS(ConsumeOptions, ConsumeOption)
+    QFuture<void> consume(const QString &queueName,
+                          const QString &consumerTag,
+                          ConsumeOptions flags = ConsumeOption::NoOptions);
 
-    bool sendAck(qlonglong deliveryTag, bool muliple);
+    bool sendAck(qint64 deliveryTag, bool muliple);
     bool handleMethodFrame(const MethodFrame *frame) override;
     bool handleHeaderFrame(const HeaderFrame *frame) override;
     bool handleBodyFrame(const BodyFrame *frame) override;

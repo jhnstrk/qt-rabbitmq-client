@@ -56,6 +56,16 @@ Client::~Client()
     d.reset();
 }
 
+QString Client::username() const
+{
+    return d->userName;
+}
+
+QString Client::password() const
+{
+    return d->password;
+}
+
 QUrl Client::connectionUrl() const
 {
     return d->url;

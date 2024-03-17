@@ -26,6 +26,9 @@ public:
 
     QSharedPointer<Channel> createChannel();
     QSharedPointer<Channel> channel(quint16 channelId) const;
+
+    QString username() const;
+    QString password() const;
 Q_SIGNALS:
     void connected();
 
