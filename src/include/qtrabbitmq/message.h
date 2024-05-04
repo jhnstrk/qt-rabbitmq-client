@@ -21,13 +21,24 @@ public:
 
     ~Message() = default;
 
-    QVariant property(BasicProperty p, const QVariant &defaultValue) const
+    QVariant property(BasicProperty p, const QVariant &defaultValue = QVariant()) const
     {
         return m_properties.value(p, defaultValue);
     }
     void setProperty(BasicProperty p, const QVariant &value) { m_properties.insert(p, value); }
     const QByteArray &payload() const { return m_payload; }
     void setPayload(const QByteArray &payload) { m_payload = payload; }
+    void setPayload(const QString &payload)
+    {
+        m_payload = payload.toUtf8();
+        this->setProperty(qmq::BasicProperty::ContentEncoding, "utf-8");
+    }
+
+    void setPayload(const char *payload)
+    {
+        m_payload = QByteArray(payload);
+        this->setProperty(qmq::BasicProperty::ContentEncoding, "utf-8");
+    }
 
     const QHash<BasicProperty, QVariant> &properties() const { return m_properties; }
 

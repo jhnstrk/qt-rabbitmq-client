@@ -44,18 +44,23 @@ public:
     bool addConsumer(Consumer *c, const QString &queueName);
 
     QFuture<void> openChannel();
-    QFuture<void> closeChannel(qint16 code,
-                               const QString &replyText,
-                               quint16 classId,
-                               quint16 methodId);
+    QFuture<void> closeChannel(qint16 code = 200,
+                               const QString &replyText = QString(),
+                               quint16 classId = 0,
+                               quint16 methodId = 0);
 
     QFuture<void> declareExchange(const QString &exchangeName,
                                   ExchangeType type,
                                   const DeclareExchangeOptions &opts = DeclareExchangeOptions());
+    QFuture<void> deleteExchange(const QString &exchangeName);
 
     QFuture<void> declareQueue(const QString &queueName,
                                const DeclareQueueOptions &opts = DeclareQueueOptions());
     QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
+
+    QFuture<void> deleteQueue(const QString &queueName);
+
+    QFuture<void> purgeQueue(const QString &queueName);
 
     enum class ConsumeOption {
         NoOptions = 0x0,
@@ -69,7 +74,7 @@ public:
                           const QString &consumerTag,
                           ConsumeOptions flags = ConsumeOption::NoOptions);
 
-    bool sendAck(qint64 deliveryTag, bool muliple);
+    bool sendAck(qint64 deliveryTag, bool muliple = false);
     bool handleMethodFrame(const MethodFrame *frame) override;
     bool handleHeaderFrame(const HeaderFrame *frame) override;
     bool handleBodyFrame(const BodyFrame *frame) override;
@@ -82,8 +87,11 @@ protected:
     bool onCloseOk(const MethodFrame *frame);
 
     bool onExchangeDeclareOk(const MethodFrame *frame);
+    bool onExchangeDeleteOk(const MethodFrame *frame);
     bool onQueueDeclareOk(const MethodFrame *frame);
     bool onQueueBindOk(const MethodFrame *frame);
+    bool onQueueDeleteOk(const MethodFrame *frame);
+    bool onQueuePurgeOk(const MethodFrame *frame);
 
     bool onBasicConsumeOk(const MethodFrame *frame);
     bool onBasicDeliver(const MethodFrame *frame);

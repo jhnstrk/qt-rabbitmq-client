@@ -116,6 +116,8 @@ bool Channel::handleMethodFrame(const MethodFrame *frame)
         switch (frame->methodId()) {
         case qmq::spec::exchange::DeclareOk:
             return this->onExchangeDeclareOk(frame);
+        case qmq::spec::exchange::DeleteOk:
+            return this->onExchangeDeleteOk(frame);
         default:
             qWarning() << "Unknown exchange frame" << frame->methodId();
             break;
@@ -127,6 +129,10 @@ bool Channel::handleMethodFrame(const MethodFrame *frame)
             return this->onQueueDeclareOk(frame);
         case qmq::spec::queue::BindOk:
             return this->onQueueBindOk(frame);
+        case qmq::spec::queue::DeleteOk:
+            return this->onQueueDeleteOk(frame);
+        case qmq::spec::queue::PurgeOk:
+            return this->onQueuePurgeOk(frame);
         default:
             qWarning() << "Unknown queue frame" << frame->methodId();
             break;
@@ -296,6 +302,42 @@ bool Channel::onExchangeDeclareOk(const MethodFrame *frame)
     return true;
 }
 
+QFuture<void> Channel::deleteExchange(const QString &exchangeName)
+{
+    MethodFrame frame(d->channelId, spec::exchange::ID_, spec::exchange::Delete);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    const short reserved1 = 0;
+    const bool ifUnused = false;
+    const bool noWait = false;
+    const QVariantList args({reserved1, exchangeName, ifUnused, noWait});
+    qDebug() << "Set delete exchange method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onExchangeDeleteOk(const MethodFrame *frame)
+{
+    qDebug() << "Delete Exchange OK received";
+    MessageItemPtr messageTracker(
+        d->popFirstMessageItem(spec::exchange::ID_, spec::exchange::Delete));
+
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
 QFuture<void> Channel::declareQueue(const QString &queueName, const DeclareQueueOptions &opts)
 {
     MethodFrame frame(d->channelId, spec::queue::ID_, spec::queue::Declare);
@@ -367,6 +409,76 @@ bool Channel::onQueueBindOk(const MethodFrame *frame)
 {
     qDebug() << "Bind Queue OK received";
     MessageItemPtr messageTracker(d->popFirstMessageItem(spec::queue::ID_, spec::queue::Bind));
+
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+QFuture<void> Channel::deleteQueue(const QString &queueName)
+{
+    MethodFrame frame(d->channelId, spec::queue::ID_, spec::queue::Delete);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    const short reserved1 = 0;
+    const bool ifUnused = false;
+    const bool ifEmpty = false;
+    const bool noWait = false;
+    const QVariantList args({reserved1, queueName, ifUnused, ifEmpty, noWait});
+    qDebug() << "Set delete queue method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onQueueDeleteOk(const MethodFrame *frame)
+{
+    qDebug() << "Delete Queue OK received";
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::queue::ID_, spec::queue::Delete));
+
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+QFuture<void> Channel::purgeQueue(const QString &queueName)
+{
+    MethodFrame frame(d->channelId, spec::queue::ID_, spec::queue::Purge);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    const short reserved1 = 0;
+    const bool noWait = false;
+    const QVariantList args({reserved1, queueName, noWait});
+    qDebug() << "Set purge queue method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onQueuePurgeOk(const MethodFrame *frame)
+{
+    qDebug() << "Purge Queue OK received";
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::queue::ID_, spec::queue::Purge));
 
     if (messageTracker) {
         messageTracker->promise.finish();
