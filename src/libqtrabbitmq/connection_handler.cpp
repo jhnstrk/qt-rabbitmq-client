@@ -76,12 +76,12 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
     }
     qDebug() << "Tune" << args;
 
-    int channelMax = args.at(0).toInt(&ok);
+    quint16 channelMax = args.at(0).toUInt(&ok);
     if (channelMax == 0) {
         // zero means no limit is specfied. Chose something.
         channelMax = 2047;
     }
-    qint64 frameMaxSizeBytes = args.at(1).toLongLong(&ok);
+    quint64 frameMaxSizeBytes = args.at(1).toULongLong(&ok);
     if (frameMaxSizeBytes == 0) {
         // zero means no limit is specfied. Chose something.
         frameMaxSizeBytes = 1024 * 1024;
@@ -109,7 +109,7 @@ bool ConnectionHandler::sendTuneOk()
 bool ConnectionHandler::sendOpen()
 {
     const QString virtualHost = m_client->virtualHost();
-    const QString reserved1 = 0;  // capabilities
+    const QString reserved1;      // capabilities
     const bool reserved2 = false; // insist
     QVariantList args({virtualHost, reserved1, reserved2});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Open);
@@ -120,6 +120,7 @@ bool ConnectionHandler::sendOpen()
 
 bool ConnectionHandler::onOpenOk(const MethodFrame *frame)
 {
+    Q_UNUSED(frame);
     qDebug() << "OpenOk";
     emit this->connectionOpened();
     return true;
@@ -127,7 +128,7 @@ bool ConnectionHandler::onOpenOk(const MethodFrame *frame)
 
 bool ConnectionHandler::onClose(const MethodFrame *frame)
 {
-    bool ok;
+    bool ok = false;
     const QVariantList args = frame->getArguments(&ok);
     if (!ok) {
         qWarning() << "Failed to parse args";
@@ -163,8 +164,9 @@ bool ConnectionHandler::sendClose(qint16 code,
     return m_client->sendFrame(&frame);
 }
 
-bool ConnectionHandler::onCloseOk(const MethodFrame *)
+bool ConnectionHandler::onCloseOk(const MethodFrame *frame)
 {
+    Q_UNUSED(frame);
     qDebug() << "CloseOk received";
     this->stopHeartbeat();
     m_client->disconnectFromHost();
@@ -190,7 +192,7 @@ bool ConnectionHandler::startHeartbeat()
 
 void ConnectionHandler::stopHeartbeat()
 {
-    if (this->m_heartbeatTimer) {
+    if (this->m_heartbeatTimer != nullptr) {
         this->m_heartbeatTimer->deleteLater();
         this->m_heartbeatTimer = nullptr;
     }

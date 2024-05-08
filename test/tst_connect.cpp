@@ -14,7 +14,8 @@ const QString ctTextPlain("text/plain");
 const QString ceUtf8("utf-8");
 const QString ceBinary("binary");
 
-bool waitForFuture(const QFuture<void> &fut, int waitTimeMs = smallWaitMs)
+template<class T>
+bool waitForFuture(const QFuture<T> &fut, int waitTimeMs = smallWaitMs)
 {
     return QTest::qWaitFor([&]() -> bool { return fut.isFinished(); }, waitTimeMs);
 }
@@ -131,14 +132,14 @@ private slots:
         msg.setProperty(qmq::BasicProperty::ContentEncoding, ceUtf8);
         msg.setPayload(testMessage());
 
-        QVERIFY(waitForFuture(pubChannel->publish(exchangeName, msg)));
+        QVERIFY(pubChannel->publish(exchangeName, msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
-        QVERIFY(subChannel->sendAck(deliveredMsg.deliveryTag()));
+        QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
 
         QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
         QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
@@ -177,14 +178,14 @@ private slots:
         msg.setProperty(qmq::BasicProperty::ContentEncoding, ceUtf8);
         msg.setPayload(testMessage("testPubSubOneClientTwoChannels"));
 
-        QVERIFY(waitForFuture(pubChannel->publish(exchangeName, msg)));
+        QVERIFY(pubChannel->publish(exchangeName, msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
-        QVERIFY(subChannel->sendAck(deliveredMsg.deliveryTag()));
+        QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
 
         QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
         QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
@@ -218,14 +219,14 @@ private slots:
         msg.setProperty(qmq::BasicProperty::ContentEncoding, ceUtf8);
         msg.setPayload(testMessage("PubSubOneClientOneChannel"));
 
-        QVERIFY(waitForFuture(theChannel->publish(exchangeName, msg)));
+        QVERIFY(theChannel->publish(exchangeName, msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
-        QVERIFY(theChannel->sendAck(deliveredMsg.deliveryTag()));
+        QVERIFY(theChannel->ack(deliveredMsg.deliveryTag()));
 
         QVERIFY(waitForFuture(theChannel->closeChannel(200, "OK", 0, 0)));
 
@@ -263,7 +264,7 @@ private slots:
         const QByteArray payload = randomBytes(1024);
         msg.setPayload(payload);
 
-        QVERIFY(waitForFuture(pubChannel->publish(exchangeName, msg)));
+        QVERIFY(pubChannel->publish(exchangeName, msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();

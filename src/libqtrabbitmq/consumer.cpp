@@ -23,7 +23,7 @@ Consumer::Consumer(const QString &consumerTag, QObject *parent)
     }
 }
 
-Consumer::~Consumer() {}
+Consumer::~Consumer() = default;
 
 QString Consumer::consumerTag() const
 {
@@ -41,9 +41,9 @@ bool Consumer::hasMessage() const
     return !d->messageQueue.isEmpty();
 }
 
-QFuture<void> Consumer::consume(Channel *channel, const QString &queueName)
+QFuture<QString> Consumer::consume(Channel *channel, const QString &queueName)
 {
-    channel->addConsumer(this, queueName);
+    channel->addConsumer(this);
     return channel->consume(queueName, this->consumerTag());
 }
 

@@ -19,7 +19,7 @@ public:
 
     QString consumerTag() const;
 
-    QFuture<void> consume(Channel *channel, const QString &queue);
+    QFuture<QString> consume(Channel *channel, const QString &queue);
 
     Message dequeueMessage();
 

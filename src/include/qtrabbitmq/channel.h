@@ -36,15 +36,16 @@ public:
     // Types defined by Rabbit: https://www.rabbitmq.com/tutorials/amqp-concepts.html
     enum class ExchangeType { Invalid, Direct, Fanout, Topic, Match, Headers = Match };
 
-    explicit Channel(Client *client, qint16 channelId);
+    explicit Channel(Client *client, quint16 channelId);
     virtual ~Channel();
 
     int channelId() const;
 
-    bool addConsumer(Consumer *c, const QString &queueName);
+    bool addConsumer(Consumer *c);
 
     QFuture<void> openChannel();
-    QFuture<void> closeChannel(qint16 code = 200,
+    QFuture<void> flow(bool active);
+    QFuture<void> closeChannel(quint16 code = 200,
                                const QString &replyText = QString(),
                                quint16 classId = 0,
                                quint16 methodId = 0);
@@ -54,14 +55,16 @@ public:
                                   const DeclareExchangeOptions &opts = DeclareExchangeOptions());
     QFuture<void> deleteExchange(const QString &exchangeName);
 
-    QFuture<void> declareQueue(const QString &queueName,
-                               const DeclareQueueOptions &opts = DeclareQueueOptions());
+    QFuture<QVariantList> declareQueue(const QString &queueName,
+                                       const DeclareQueueOptions &opts = DeclareQueueOptions());
     QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
     QFuture<void> unbindQueue(const QString &queueName, const QString &exchangeName);
 
-    QFuture<void> deleteQueue(const QString &queueName);
+    // Returns the message-count
+    QFuture<int> deleteQueue(const QString &queueName);
 
-    QFuture<void> purgeQueue(const QString &queueName);
+    // Returns the message-count
+    QFuture<int> purgeQueue(const QString &queueName);
 
     // Client methods for the "Basic" API.
     QFuture<void> qos(uint prefetchSize, ushort prefetchCount, bool global);
@@ -73,18 +76,15 @@ public:
         NoWait = 0x8,
     };
     Q_DECLARE_FLAGS(ConsumeOptions, ConsumeOption)
-    QFuture<void> consume(const QString &queueName,
-                          const QString &consumerTag,
-                          ConsumeOptions flags = ConsumeOption::NoOptions);
-
-    QFuture<void> cancel(const QString &consumerTag, bool noWait = false);
-    QFuture<void> basicReturn(qint16 code,
-                              const QString &replyText,
-                              const QString &exchangeName,
-                              const QString &routingKey);
-
-    QFuture<void> get(const QString &queueName, bool noAck);
-    QFuture<void> publish(const QString &exchangeName, const qmq::Message &message);
+    QFuture<QString> consume(const QString &queueName,
+                             const QString &consumerTag,
+                             ConsumeOptions flags = ConsumeOption::NoOptions);
+    // Returns the consumer tag.
+    QFuture<QString> cancel(const QString &consumerTag, bool noWait = false);
+    // If the queue isn't empty, return value is { message, messageCount }
+    // If the queue is empty, the return is empty.
+    QFuture<QVariantList> get(const QString &queueName, bool noAck);
+    bool publish(const QString &exchangeName, const qmq::Message &message);
     bool recoverAsync(bool requeue);
     QFuture<void> recover(bool requeue);
     bool ack(qint64 deliveryTag, bool muliple = false);
@@ -97,16 +97,20 @@ public:
     bool handleMethodFrame(const MethodFrame *frame) override;
     bool handleHeaderFrame(const HeaderFrame *frame) override;
     bool handleBodyFrame(const BodyFrame *frame) override;
-    bool handleHeartbeatFrame(const HeartbeatFrame *frame) override {}
+    bool handleHeartbeatFrame(const HeartbeatFrame *) override { return false; }
 
 protected:
-    bool onOpenOk(const MethodFrame *frame);
-    bool onClose(const MethodFrame *frame);
-    bool onCloseOk(const MethodFrame *frame);
+    bool onChannelOpenOk(const MethodFrame *frame);
+    bool onChannelFlow(const MethodFrame *frame);
+    bool flowOk(bool active);
+    bool onChannelFlowOk(const MethodFrame *frame);
+    bool onChannelClose(const MethodFrame *frame);
+    bool onChannelCloseOk(const MethodFrame *frame);
     bool closeOk();
 
     bool onExchangeDeclareOk(const MethodFrame *frame);
     bool onExchangeDeleteOk(const MethodFrame *frame);
+
     bool onQueueDeclareOk(const MethodFrame *frame);
     bool onQueueBindOk(const MethodFrame *frame);
     bool onQueueUnbindOk(const MethodFrame *frame);

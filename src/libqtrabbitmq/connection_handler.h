@@ -16,9 +16,9 @@ class ConnectionHandler : public QObject, public AbstractFrameHandler
 public:
     ConnectionHandler(Client *client);
     bool handleMethodFrame(const MethodFrame *frame) override;
-    bool handleHeaderFrame(const HeaderFrame *frame) override {}
-    bool handleBodyFrame(const BodyFrame *frame) override {}
-    bool handleHeartbeatFrame(const HeartbeatFrame *frame) override {}
+    bool handleHeaderFrame(const HeaderFrame *) override { return false; }
+    bool handleBodyFrame(const BodyFrame *) override { return false; }
+    bool handleHeartbeatFrame(const HeartbeatFrame *) override { return false; }
 
     bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 

@@ -13,8 +13,8 @@
 #include <memory>
 
 namespace {
-constexpr const int defaultPort = 5672;
-constexpr const int defaultSslPort = 5673;
+constexpr const quint16 defaultPort = 5672;
+constexpr const quint16 defaultSslPort = 5673;
 constexpr const char *const amqpScheme = "amqp";
 constexpr const char *const amqpSslScheme = "amqps";
 
@@ -76,7 +76,7 @@ void Client::connectToHost(const QUrl &url)
 {
     bool useSsl = false;
     QString vhost = "/";
-    int port = defaultPort;
+    quint16 port = defaultPort;
 
     if (url.scheme() == amqpScheme) {
     } else if (url.scheme() == amqpSslScheme) {
@@ -96,7 +96,7 @@ void Client::connectToHost(const QUrl &url)
         vhost = url.path();
     }
 
-    port = url.port(port);
+    port = static_cast<quint16>(url.port(port));
 
     d->url = url;
     d->vhost = vhost;
@@ -124,10 +124,10 @@ QString Client::virtualHost() const
     return d->vhost;
 }
 
-bool Client::sendFrame(const Frame *f)
+bool Client::sendFrame(const Frame *frame)
 {
     const quint32 maxFrameSize = d->maxFrameSizeBytes;
-    return Frame::writeFrame(d->socket, maxFrameSize, f);
+    return Frame::writeFrame(d->socket, maxFrameSize, frame);
 }
 
 void Client::onSocketConnected()
@@ -199,7 +199,7 @@ void Client::disconnectFromHost(qint16 code,
                                 quint16 classId,
                                 quint16 methodId)
 {
-    if (!d->socket) {
+    if (d->socket == nullptr) {
         qWarning() << "Already disconnected";
         return;
     }
