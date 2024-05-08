@@ -84,7 +84,9 @@ public:
 
 protected:
     bool onOpenOk(const MethodFrame *frame);
+    bool onClose(const MethodFrame *frame);
     bool onCloseOk(const MethodFrame *frame);
+    bool closeOk();
 
     bool onExchangeDeclareOk(const MethodFrame *frame);
     bool onExchangeDeleteOk(const MethodFrame *frame);

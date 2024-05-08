@@ -105,6 +105,8 @@ bool Channel::handleMethodFrame(const MethodFrame *frame)
         switch (frame->methodId()) {
         case spec::channel::OpenOk:
             return this->onOpenOk(frame);
+        case spec::channel::Close:
+            return this->onClose(frame);
         case spec::channel::CloseOk:
             return this->onCloseOk(frame);
         default:
@@ -171,6 +173,7 @@ bool Channel::handleHeaderFrame(const HeaderFrame *frame)
     if (messageSize == 0) {
         this->incomingMessageComplete();
     }
+    return true;
 }
 
 bool Channel::handleBodyFrame(const BodyFrame *frame)
@@ -184,6 +187,7 @@ bool Channel::handleBodyFrame(const BodyFrame *frame)
     if (d->deliveringMessage->m_payload.size() >= d->deliveringMessage->m_contentSize) {
         this->incomingMessageComplete();
     }
+    return true;
 }
 
 QFuture<void> Channel::openChannel()
@@ -252,6 +256,31 @@ bool Channel::onCloseOk(const MethodFrame *)
     MessageItemPtr messageTracker(d->popFirstMessageItem(spec::channel::ID_, spec::channel::Close));
     if (messageTracker) {
         messageTracker->promise.finish();
+    }
+    return true;
+}
+
+// Server has requested channel to close (normally due to an error)
+bool Channel::onClose(const MethodFrame *frame)
+{
+    qDebug() << "Close received";
+    const QVariantList args = frame->getArguments();
+    const qint16 code = args.at(0).toInt();
+    const QString replyText = args.at(1).toString();
+    const quint16 classId = args.at(2).toInt();
+    const quint16 methodId = args.at(3).toInt();
+    qDebug() << "Code:" << code << "replyText:" << replyText << "class, method: (" << classId << ","
+             << methodId << ")";
+    return this->closeOk();
+}
+
+bool Channel::closeOk()
+{
+    MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::CloseOk);
+    qDebug() << "Set closeOk frame args";
+    if (!d->client->sendFrame(&frame)) {
+        qWarning() << "Unable to send CloseOK";
+        return false;
     }
     return true;
 }
@@ -549,10 +578,9 @@ QFuture<void> Channel::publish(const QString &exchangeName, const qmq::Message &
 
     // Short, ExchangeName, ShortStr, Bit, Bit
     const short reserved1 = 0;
-    const QString routingKey;
+    const QString routingKey = message.routingKey();
     const bool mandatory = false;
     const bool immediate = false;
-    const QVariantHash consumeArguments;
     const QVariantList args({reserved1, exchangeName, routingKey, mandatory, immediate});
     qDebug() << "Set publish method" << d->channelId << "frame args" << args;
     frame.setArguments(args);
@@ -568,6 +596,11 @@ QFuture<void> Channel::publish(const QString &exchangeName, const qmq::Message &
     const QByteArray payload = message.payload();
     HeaderFrame header(d->channelId, frame.classId(), payload.size(), message.properties());
     isOk = d->client->sendFrame(&header);
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
 
     qint64 writtenBytes = 0;
     const qint64 maxFrameSize = 1024 * 1024; // TODO.
@@ -577,6 +610,11 @@ QFuture<void> Channel::publish(const QString &exchangeName, const qmq::Message &
         const QByteArray part = payload.mid(writtenBytes, len);
         BodyFrame body(d->channelId, part);
         isOk = d->client->sendFrame(&body);
+        if (!isOk) {
+            messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+            messageTracker->promise.finish();
+            return messageTracker->promise.future();
+        }
         writtenBytes += len;
     }
     messageTracker->promise.finish();

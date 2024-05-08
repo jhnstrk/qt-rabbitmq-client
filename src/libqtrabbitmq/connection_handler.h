@@ -3,6 +3,7 @@
 #include "qtrabbitmq/abstract_frame_handler.h"
 
 #include <QObject>
+#include <QTimer>
 #include <qglobal.h>
 
 namespace qmq {
@@ -21,6 +22,8 @@ public:
 
     bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
+    quint32 frameMaxSizeBytes() const { return m_frameMaxSizeBytes; }
+
 Q_SIGNALS:
     void connectionOpened();
 
@@ -32,6 +35,9 @@ protected:
     bool onOpenOk(const MethodFrame *frame);
     bool onClose(const MethodFrame *frame);
     bool sendCloseOk();
+    bool startHeartbeat();
+    void stopHeartbeat();
+    void onHeartbeatTimer();
 
 private:
     bool onStart(const MethodFrame *frame);
@@ -39,6 +45,7 @@ private:
     bool onCloseOk(const MethodFrame *frame);
 
     Client *m_client = nullptr;
+    QTimer *m_heartbeatTimer = nullptr;
     quint16 m_channelMax = 255;
     quint32 m_frameMaxSizeBytes = 1024 * 1024;
     quint16 m_heartbeatSeconds = 8;

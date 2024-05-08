@@ -36,8 +36,7 @@ bool ConnectionHandler::handleMethodFrame(const MethodFrame *frame)
 
 bool ConnectionHandler::onStart(const MethodFrame *frame)
 {
-    qDebug() << "Frane content" << frame->content();
-    bool ok;
+    bool ok = false;
     const QVariantList args = frame->getArguments(&ok);
     if (!ok) {
         qWarning() << "Failed to parse args";
@@ -69,8 +68,7 @@ bool ConnectionHandler::sendStartOk()
 
 bool ConnectionHandler::onTune(const MethodFrame *frame)
 {
-    qDebug() << "Frane content" << frame->content();
-    bool ok;
+    bool ok = false;
     const QVariantList args = frame->getArguments(&ok);
     if (!ok) {
         qWarning() << "Failed to parse args";
@@ -78,10 +76,24 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
     }
     qDebug() << "Tune" << args;
 
-    this->m_channelMax = args.at(0).toInt(&ok);
-    this->m_frameMaxSizeBytes = args.at(1).toLongLong(&ok);
+    int channelMax = args.at(0).toInt(&ok);
+    if (channelMax == 0) {
+        // zero means no limit is specfied. Chose something.
+        channelMax = 2047;
+    }
+    qint64 frameMaxSizeBytes = args.at(1).toLongLong(&ok);
+    if (frameMaxSizeBytes == 0) {
+        // zero means no limit is specfied. Chose something.
+        frameMaxSizeBytes = 1024 * 1024;
+    }
+
+    this->m_channelMax = channelMax;
+    this->m_frameMaxSizeBytes = frameMaxSizeBytes;
     this->m_heartbeatSeconds = args.at(2).toInt(&ok);
+
     this->sendTuneOk() && this->sendOpen();
+
+    this->startHeartbeat();
     return true;
 }
 
@@ -110,8 +122,6 @@ bool ConnectionHandler::onOpenOk(const MethodFrame *frame)
 {
     qDebug() << "OpenOk";
     emit this->connectionOpened();
-
-    // m_client->sendHeartbeat();
     return true;
 }
 
@@ -128,7 +138,7 @@ bool ConnectionHandler::onClose(const MethodFrame *frame)
     const QString replyText = args.at(1).toString();
     const int classId = args.at(2).toInt();
     const int methodId = args.at(3).toInt();
-    qDebug() << "Received close";
+    qDebug() << "Received close" << code << replyText << classId << methodId;
     this->sendCloseOk();
     m_client->disconnectFromHost();
     return true;
@@ -156,8 +166,39 @@ bool ConnectionHandler::sendClose(qint16 code,
 bool ConnectionHandler::onCloseOk(const MethodFrame *)
 {
     qDebug() << "CloseOk received";
+    this->stopHeartbeat();
     m_client->disconnectFromHost();
     return true;
+}
+
+bool ConnectionHandler::startHeartbeat()
+{
+    if (this->m_heartbeatSeconds <= 0) {
+        return true;
+    }
+    if (!this->m_heartbeatTimer) {
+        this->m_heartbeatTimer = new QTimer(this);
+        this->m_heartbeatTimer->setInterval(int(this->m_heartbeatSeconds) * 1000);
+        connect(this->m_heartbeatTimer,
+                &QTimer::timeout,
+                this,
+                &ConnectionHandler::onHeartbeatTimer);
+    }
+    this->m_heartbeatTimer->start();
+    return true;
+}
+
+void ConnectionHandler::stopHeartbeat()
+{
+    if (this->m_heartbeatTimer) {
+        this->m_heartbeatTimer->deleteLater();
+        this->m_heartbeatTimer = nullptr;
+    }
+}
+
+void ConnectionHandler::onHeartbeatTimer()
+{
+    this->m_client->sendHeartbeat();
 }
 
 } // namespace detail

@@ -10,6 +10,55 @@
 #include <QtEndian>
 
 namespace {
+bool verifyTypeCompat(const qmq::FieldValue type, const QMetaType &metatype)
+{
+    switch (type) {
+    case qmq::FieldValue::Boolean:
+        return metatype.id() == QMetaType::Bool;
+    case qmq::FieldValue::ShortShortInt:
+        return metatype.id() == QMetaType::SChar;
+    case qmq::FieldValue::ShortShortUint:
+        return metatype.id() == QMetaType::UChar;
+    case qmq::FieldValue::ShortInt:
+        return metatype.id() == QMetaType::Short || metatype.id() == QMetaType::Int;
+    case qmq::FieldValue::ShortUint:
+        return metatype.id() == QMetaType::UShort || metatype.id() == QMetaType::Int;
+    case qmq::FieldValue::LongInt:
+        return metatype.id() == QMetaType::Int;
+    case qmq::FieldValue::LongUint:
+        return metatype.id() == QMetaType::UInt;
+    case qmq::FieldValue::LongLongInt:
+        return metatype.id() == QMetaType::LongLong;
+    case qmq::FieldValue::LongLongUint:
+        return metatype.id() == QMetaType::ULongLong;
+    case qmq::FieldValue::Float:
+        return metatype.id() == QMetaType::Float;
+    case qmq::FieldValue::Double:
+        return metatype.id() == QMetaType::Double;
+    case qmq::FieldValue::DecimalValue:
+        return metatype.id() == QMetaType::fromType<qmq::Decimal>().id();
+    case qmq::FieldValue::ShortString:
+        return metatype.id() == QMetaType::QString;
+    case qmq::FieldValue::LongString:
+        return metatype.id() == QMetaType::QByteArray;
+    case qmq::FieldValue::FieldArray:
+        return metatype.id() == QMetaType::QVariantList;
+    case qmq::FieldValue::Timestamp:
+        return metatype.id() == QMetaType::QDateTime;
+    case qmq::FieldValue::FieldTable:
+        return metatype.id() == QMetaType::QVariantHash;
+    case qmq::FieldValue::Void:
+        return metatype.id() == QMetaType::Void;
+    case qmq::FieldValue::Bit:
+        return metatype.id() == QMetaType::Bool;
+    case qmq::FieldValue::Invalid:
+        return metatype.id() == 0;
+    default:
+        return false;
+    }
+    // Unreachable
+    return false;
+}
 template<typename T>
 T readAmqp(QIODevice *io, bool *ok)
 {
@@ -742,6 +791,11 @@ bool qmq::Frame::writeNativeFieldValues(QIODevice *io,
     for (qsizetype i = 0; i < types.size(); ++i) {
         const FieldValue &type = types.at(i);
         const QVariant &value = values.at(i);
+#ifndef NDEBUG
+        if (!verifyTypeCompat(type, value.metaType())) {
+            qWarning() << "Incompatible type" << (char) type << value.metaType().name() << i;
+        }
+#endif
         if (type == FieldValue::Bit) {
             if (!value.canConvert<bool>()) {
                 qWarning() << "Failed conversion to bool";
@@ -899,6 +953,12 @@ QVariantList qmq::MethodFrame::getArguments(bool *ok) const
     QBuffer io;
     io.setData(this->m_arguments);
     bool isOk = io.open(QIODevice::ReadOnly);
+    if (!isOk) {
+        if (ok)
+            *ok = false;
+        qWarning() << "Unable to open stream for reading";
+        return QVariantList();
+    }
     return Frame::readNativeFieldValues(&io, types, ok);
 }
 
@@ -937,7 +997,7 @@ std::unique_ptr<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
     io.setData(content);
     bool ok = io.open(QIODevice::ReadOnly);
     const quint16 classId = readAmqp<quint16>(&io, &ok);
-    const quint16 weight = readAmqp<quint16>(&io, &ok);
+    /* const quint16 weight = */ readAmqp<quint16>(&io, &ok);
     const quint64 contentSize = readAmqp<quint64>(&io, &ok);
     const quint16 propertyFlags = readAmqp<quint16>(&io, &ok);
     if (!ok) {
@@ -982,12 +1042,26 @@ QByteArray qmq::HeaderFrame::content() const
         qWarning() << "Buffer not opened";
         return QByteArray();
     }
-    ok = writeAmqp<quint16>(&io, this->classId());
-    ok = writeAmqp<quint16>(&io, 0); // weight.
-    ok = writeAmqp<quint64>(&io, this->contentSize());
-    ok = writeAmqp<quint16>(&io, propertyFlags);
-    ok = Frame::writeNativeFieldValues(&io, orderedValues, orderedTypes);
+    do {
+        ok = writeAmqp<quint16>(&io, this->classId());
+        if (!ok)
+            break;
+        ok = writeAmqp<quint16>(&io, 0); // weight.
+        if (!ok)
+            break;
+        ok = writeAmqp<quint64>(&io, this->contentSize());
+        if (!ok)
+            break;
+        ok = writeAmqp<quint16>(&io, propertyFlags);
+        if (!ok)
+            break;
+        ok = Frame::writeNativeFieldValues(&io, orderedValues, orderedTypes);
+    } while (false);
     io.close();
+    if (!ok) {
+        qWarning() << "Error writing field values";
+        return QByteArray();
+    }
     return io.buffer();
 }
 

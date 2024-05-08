@@ -77,7 +77,6 @@ private slots:
         }
 
         client.disconnectFromHost();
-        QTest::qWait(smallWaitMs);
     }
     void testDeleteExchange()
     {
@@ -146,7 +145,6 @@ private slots:
 
         pubClient.disconnectFromHost();
         subClient.disconnectFromHost();
-        QTest::qWait(smallWaitMs);
     }
 
     void testPubSubOneClientTwoChannels()
@@ -170,7 +168,7 @@ private slots:
         QVERIFY(waitForFuture(subChannel->openChannel()));
         QVERIFY(waitForFuture(subChannel->bindQueue(queueName, exchangeName)));
         //Add consumer
-        qmq::Consumer c;
+        qmq::Consumer c("test-consumer1");
         QVERIFY(waitForFuture(c.consume(subChannel.get(), queueName)));
         QSignalSpy subMessageSpy(&c, &qmq::Consumer::messageReady);
 
@@ -192,7 +190,6 @@ private slots:
         QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
 
         theClient.disconnectFromHost();
-        QTest::qWait(smallWaitMs);
     }
 
     void testPubSubOneClientOneChannel()
@@ -233,7 +230,6 @@ private slots:
         QVERIFY(waitForFuture(theChannel->closeChannel(200, "OK", 0, 0)));
 
         theClient.disconnectFromHost();
-        QTest::qWait(smallWaitMs);
     }
 
     void testPubSubLargeMessage()
@@ -280,7 +276,6 @@ private slots:
         QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
 
         theClient.disconnectFromHost();
-        QTest::qWait(smallWaitMs);
     }
 
     void cleanupTestCase()

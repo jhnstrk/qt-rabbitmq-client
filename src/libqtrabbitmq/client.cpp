@@ -7,6 +7,7 @@
 #include <QByteArray>
 #include <QSslSocket>
 #include <QString>
+#include <QTimer>
 #include <QUrl>
 
 #include <memory>
@@ -138,7 +139,7 @@ void Client::onSocketConnected()
 void Client::onSocketReadyRead()
 {
     qDebug() << "Ready read";
-    const quint32 maxFrameSize = 64 * 1024; // todo
+    const quint32 maxFrameSize = d->connection->frameMaxSizeBytes();
     ErrorCode errCode = qmq::ErrorCode::NoError;
     std::unique_ptr<Frame> frame(Frame::readFrame(d->socket, maxFrameSize, &errCode));
     if (frame) {
@@ -175,7 +176,7 @@ void Client::onSocketReadyRead()
         break;
     case FrameType::Heartbeat:
         qDebug() << "Heartbeat frame on channel" << frame->channel();
-        handler->handleHeartbeatFrame(static_cast<HeartbeatFrame *>(frame.get()));
+        isHandled = handler->handleHeartbeatFrame(static_cast<HeartbeatFrame *>(frame.get()));
         break;
     default:
         qWarning() << "Unknown frame type" << (int) frame->type();
@@ -183,9 +184,13 @@ void Client::onSocketReadyRead()
     }
 
     if (d->socket->bytesAvailable() > 0) {
-#warning Make this a timer.
         qDebug() << "More data to come";
-        this->onSocketReadyRead();
+        // Allow event loop to do some work if needed.
+        QTimer::singleShot(std::chrono::milliseconds(0), this, &Client::onSocketReadyRead);
+    }
+    if (!isHandled) {
+        qWarning() << "Unhandled frame type" << (int) frame->type() << "on channel"
+                   << frame->channel();
     }
 }
 
