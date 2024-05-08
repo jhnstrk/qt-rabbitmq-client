@@ -40,7 +40,7 @@ struct MessageItem
 
     qint16 classId = 0;
     qint16 methodId = 0;
-    QPromise<void> promise;
+    QPromise<QVariant> promise;
 };
 
 struct IncomingMessage
@@ -51,6 +51,8 @@ struct IncomingMessage
     QString m_consumerTag;
     qint64 m_deliveryTag = 0;
     bool m_redelivered = false;
+    bool m_isGet = false;    // Is the message coming from a (synchronous) Get operation?
+    uint m_messageCount = 0; // Message count is passed with Get.
     QString m_exchangeName;
     QString m_routingKey;
 };
@@ -131,6 +133,8 @@ bool Channel::handleMethodFrame(const MethodFrame *frame)
             return this->onQueueDeclareOk(frame);
         case qmq::spec::queue::BindOk:
             return this->onQueueBindOk(frame);
+        case qmq::spec::queue::UnbindOk:
+            return this->onQueueUnbindOk(frame);
         case qmq::spec::queue::DeleteOk:
             return this->onQueueDeleteOk(frame);
         case qmq::spec::queue::PurgeOk:
@@ -142,10 +146,22 @@ bool Channel::handleMethodFrame(const MethodFrame *frame)
         break;
     case qmq::spec::basic::ID_:
         switch (frame->methodId()) {
+        case qmq::spec::basic::QosOk:
+            return this->onBasicQosOk(frame);
         case qmq::spec::basic::ConsumeOk:
             return this->onBasicConsumeOk(frame);
+        case qmq::spec::basic::CancelOk:
+            return this->onBasicCancelOk(frame);
+        case qmq::spec::basic::Return:
+            return this->onBasicReturn(frame);
         case qmq::spec::basic::Deliver:
             return this->onBasicDeliver(frame);
+        case qmq::spec::basic::GetOk:
+            return this->onBasicGetOk(frame);
+        case qmq::spec::basic::GetEmpty:
+            return this->onBasicGetEmpty(frame);
+        case qmq::spec::basic::RecoverOk:
+            return this->onBasicRecoverOk(frame);
         default:
             qWarning() << "Unknown basic frame" << frame->methodId();
             break;
@@ -190,7 +206,7 @@ bool Channel::handleBodyFrame(const BodyFrame *frame)
     return true;
 }
 
-QFuture<void> Channel::openChannel()
+QFuture<QVariant> Channel::openChannel()
 {
     MessageItemPtr messageTracker(new MessageItem(spec::channel::ID_, spec::channel::Open));
     messageTracker->promise.start();
@@ -445,6 +461,41 @@ bool Channel::onQueueBindOk(const MethodFrame *frame)
     return true;
 }
 
+QFuture<void> Channel::unbindQueue(const QString &queueName, const QString &exchangeName)
+{
+    MethodFrame frame(d->channelId, spec::queue::ID_, spec::queue::Unbind);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    const short reserved1 = 0;
+    const QString routingKey;
+    const QVariantHash unbindArguments;
+    const QVariantList args({reserved1, queueName, exchangeName, routingKey, unbindArguments});
+    qDebug() << "Set bind queue method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onQueueUnbindOk(const MethodFrame *frame)
+{
+    qDebug() << "Bind Queue OK received";
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::queue::ID_, spec::queue::Unbind));
+
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
 QFuture<void> Channel::deleteQueue(const QString &queueName)
 {
     MethodFrame frame(d->channelId, spec::queue::ID_, spec::queue::Delete);
@@ -529,6 +580,41 @@ bool Channel::addConsumer(Consumer *c, const QString &queueName)
     return true;
 }
 
+// ----------------------------------------------------------------------------
+// Basic Methods
+QFuture<void> Channel::qos(uint prefetchSize, ushort prefetchCount, bool global)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Qos);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    // Long, Short, Bit
+    const QVariantList args({prefetchSize, prefetchCount, global});
+    qDebug() << "Set qos method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onBasicQosOk(const MethodFrame *frame)
+{
+    qDebug() << "Basic Qos OK received";
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Qos));
+
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
 QFuture<void> Channel::consume(const QString &queueName,
                                const QString &consumerTag,
                                ConsumeOptions flags)
@@ -565,6 +651,39 @@ bool Channel::onBasicConsumeOk(const MethodFrame *frame)
     qDebug() << "Basic Consume OK received";
     MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Consume));
 
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+QFuture<void> Channel::cancel(const QString &consumerTag, bool noWait)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Cancel);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    // ShortStr, Bit
+    const QVariantList args({consumerTag, noWait});
+    qDebug() << "Set qos method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onBasicCancelOk(const MethodFrame *frame)
+{
+    qDebug() << "Basic Cancel OK received";
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Cancel));
+    // const QString consumerTag = frame->getArguments().at(0).toString();
     if (messageTracker) {
         messageTracker->promise.finish();
     }
@@ -621,20 +740,29 @@ QFuture<void> Channel::publish(const QString &exchangeName, const qmq::Message &
     return messageTracker->promise.future();
 }
 
-bool Channel::sendAck(qint64 deliveryTag, bool muliple)
+QFuture<void> Channel::basicReturn(qint16 code,
+                                   const QString &replyText,
+                                   const QString &exchangeName,
+                                   const QString &routingKey)
 {
-    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Ack);
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Return);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
 
-    QVariantList args({deliveryTag, muliple});
-    qDebug() << "Set ack method" << d->channelId << "frame args" << args;
+    // ShortStr, Bit
+    const QVariantList args({code, replyText, exchangeName, routingKey});
+    qDebug() << "Set return method" << d->channelId << "frame args" << args;
     frame.setArguments(args);
-    bool isOk = d->client->sendFrame(&frame);
+    const bool isOk = d->client->sendFrame(&frame);
 
     if (!isOk) {
-        qWarning() << "Failed to send frame";
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
     }
 
-    return isOk;
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
 }
 
 bool Channel::onBasicDeliver(const MethodFrame *frame)
@@ -662,17 +790,246 @@ bool Channel::onBasicDeliver(const MethodFrame *frame)
     return true;
 }
 
+QFuture<void> Channel::get(const QString &queueName, bool noAck)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Get);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    // Short, ShortStr, Bit
+    const ushort reserved1 = 0;
+    const QVariantList args({reserved1, queueName, noAck});
+    qDebug() << "Set get method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onBasicGetOk(const MethodFrame *frame)
+{
+    qDebug() << "Basic Get OK received";
+    // {DeliveryTag, Redelivered, ExchangeName, ShortStr, Long};
+    bool isOk = false;
+    const QVariantList args = frame->getArguments(&isOk);
+    if (!isOk) {
+        qWarning() << "Failed to get arguments";
+    }
+    const qint64 deliveryTag = args.at(0).toLongLong();
+    const bool redelivered = args.at(1).toBool();
+    const QString exchangeName = args.at(2).toString();
+    const QString routingKey = args.at(3).toString();
+    const uint messageCount = args.at(4).toUInt();
+
+    d->deliveringMessage.reset(new IncomingMessage);
+    d->deliveringMessage->m_consumerTag = QString();
+    d->deliveringMessage->m_deliveryTag = deliveryTag;
+    d->deliveringMessage->m_exchangeName = exchangeName;
+    d->deliveringMessage->m_redelivered = redelivered;
+    d->deliveringMessage->m_routingKey = routingKey;
+    d->deliveringMessage->m_isGet = true;
+    d->deliveringMessage->m_messageCount = messageCount;
+
+    return true;
+}
+
+bool Channel::onBasicGetEmpty(const MethodFrame *frame)
+{
+    qDebug() << "Basic Get Empty received";
+    // Only argument is reserved.
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Get));
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+bool Channel::ack(qint64 deliveryTag, bool muliple)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Ack);
+
+    QVariantList args({deliveryTag, muliple});
+    qDebug() << "Set ack method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        qWarning() << "Failed to send frame";
+    }
+
+    return isOk;
+}
+
+bool Channel::reject(qint64 deliveryTag, bool requeue)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Reject);
+
+    QVariantList args({deliveryTag, requeue});
+    qDebug() << "Set reject method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        qWarning() << "Failed to send frame";
+    }
+
+    return isOk;
+}
+
+bool Channel::recoverAsync(bool requeue)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::RecoverAsync);
+
+    const QVariantList args = {requeue};
+    qDebug() << "Set recoverAsync method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        qWarning() << "Failed to send frame";
+    }
+
+    return isOk;
+}
+
+QFuture<void> Channel::recover(bool requeue)
+{
+    MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Recover);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+
+    // ShortStr, Bit
+    QVariantList args = {requeue};
+    qDebug() << "Set recover method" << d->channelId << "frame args" << args;
+    frame.setArguments(args);
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onBasicRecoverOk(const MethodFrame *frame)
+{
+    qDebug() << "Basic Recover OK received";
+    // Only argument is reserved.
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Recover));
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+// ----------------------------------------------------------------------------
+// TX
+QFuture<void> Channel::txSelect()
+{
+    MethodFrame frame(d->channelId, spec::tx::ID_, spec::tx::Select);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+    // No args.
+    qDebug() << "Set Tx Select method" << d->channelId;
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onTxSelectOk(const MethodFrame *frame)
+{
+    qDebug() << "Tx Select OK received";
+    // Only argument is reserved.
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::tx::ID_, spec::tx::Select));
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+QFuture<void> Channel::txCommit()
+{
+    MethodFrame frame(d->channelId, spec::tx::ID_, spec::tx::Commit);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+    // No args.
+    qDebug() << "Set Tx Select method" << d->channelId;
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onTxCommitOk(const MethodFrame *frame)
+{
+    qDebug() << "Tx Commit OK received";
+    // Only argument is reserved.
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::tx::ID_, spec::tx::Commit));
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+QFuture<void> Channel::txRollback()
+{
+    MethodFrame frame(d->channelId, spec::tx::ID_, spec::tx::Rollback);
+    MessageItemPtr messageTracker(new MessageItem(frame.classId(), frame.methodId()));
+    // No args.
+    qDebug() << "Set Tx Rollback method" << d->channelId;
+    const bool isOk = d->client->sendFrame(&frame);
+
+    if (!isOk) {
+        messageTracker->promise.setException(qmq::Exception(1, "Failed to send frame"));
+        messageTracker->promise.finish();
+        return messageTracker->promise.future();
+    }
+
+    d->inFlightMessages.push_back(messageTracker);
+
+    return messageTracker->promise.future();
+}
+
+bool Channel::onTxRollbackOk(const MethodFrame *frame)
+{
+    qDebug() << "Tx Select OK received";
+    // Only argument is reserved.
+    MessageItemPtr messageTracker(d->popFirstMessageItem(spec::tx::ID_, spec::tx::Rollback));
+    if (messageTracker) {
+        messageTracker->promise.finish();
+    }
+    return true;
+}
+
+// ----------------------------------------------------------------------------
 void Channel::incomingMessageComplete()
 {
     qDebug() << "Message complete with delivery tag" << d->deliveringMessage->m_deliveryTag
              << "and size" << d->deliveringMessage->m_payload.size();
     qDebug() << "payload" << QString::fromUtf8(d->deliveringMessage->m_payload);
 
-    const QString consumerTag = d->deliveringMessage->m_consumerTag;
-    auto consumerIt = d->consumers.find(consumerTag);
-    if (consumerIt == d->consumers.end()) {
-        qWarning() << "No consumer found for message";
-    }
     qmq::Message msg(d->deliveringMessage->m_properties,
                      d->deliveringMessage->m_payload,
                      d->deliveringMessage->m_routingKey);
@@ -680,7 +1037,23 @@ void Channel::incomingMessageComplete()
     msg.setRedelivered(d->deliveringMessage->m_redelivered);
     msg.setExchangeName(d->deliveringMessage->m_exchangeName);
 
-    consumerIt.value()->pushMessage(msg);
+    if (d->deliveringMessage->m_isGet) {
+        MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Get));
+        if (!messageTracker) {
+            qWarning() << "Unexpected message";
+            return;
+        }
+        messageTracker->promise.addResult(msg);
+        messageTracker->promise.finish();
+    } else {
+        const QString consumerTag = d->deliveringMessage->m_consumerTag;
+        auto consumerIt = d->consumers.find(consumerTag);
+        if (consumerIt == d->consumers.end()) {
+            qWarning() << "No consumer found for message";
+        }
+
+        consumerIt.value()->pushMessage(msg);
+    }
 }
 } // namespace qmq
 

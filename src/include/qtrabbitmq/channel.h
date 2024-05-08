@@ -57,11 +57,14 @@ public:
     QFuture<void> declareQueue(const QString &queueName,
                                const DeclareQueueOptions &opts = DeclareQueueOptions());
     QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
+    QFuture<void> unbindQueue(const QString &queueName, const QString &exchangeName);
 
     QFuture<void> deleteQueue(const QString &queueName);
 
     QFuture<void> purgeQueue(const QString &queueName);
 
+    // Client methods for the "Basic" API.
+    QFuture<void> qos(uint prefetchSize, ushort prefetchCount, bool global);
     enum class ConsumeOption {
         NoOptions = 0x0,
         NoLocal = 0x1,
@@ -74,13 +77,27 @@ public:
                           const QString &consumerTag,
                           ConsumeOptions flags = ConsumeOption::NoOptions);
 
-    bool sendAck(qint64 deliveryTag, bool muliple = false);
+    QFuture<void> cancel(const QString &consumerTag, bool noWait = false);
+    QFuture<void> basicReturn(qint16 code,
+                              const QString &replyText,
+                              const QString &exchangeName,
+                              const QString &routingKey);
+
+    QFuture<void> get(const QString &queueName, bool noAck);
+    QFuture<void> publish(const QString &exchangeName, const qmq::Message &message);
+    bool recoverAsync(bool requeue);
+    QFuture<void> recover(bool requeue);
+    bool ack(qint64 deliveryTag, bool muliple = false);
+    bool reject(qint64 deliveryTag, bool requeue);
+
+    QFuture<void> txSelect();
+    QFuture<void> txRollback();
+    QFuture<void> txCommit();
+
     bool handleMethodFrame(const MethodFrame *frame) override;
     bool handleHeaderFrame(const HeaderFrame *frame) override;
     bool handleBodyFrame(const BodyFrame *frame) override;
     bool handleHeartbeatFrame(const HeartbeatFrame *frame) override {}
-
-    QFuture<void> publish(const QString &exchangeName, const qmq::Message &message);
 
 protected:
     bool onOpenOk(const MethodFrame *frame);
@@ -92,11 +109,22 @@ protected:
     bool onExchangeDeleteOk(const MethodFrame *frame);
     bool onQueueDeclareOk(const MethodFrame *frame);
     bool onQueueBindOk(const MethodFrame *frame);
+    bool onQueueUnbindOk(const MethodFrame *frame);
     bool onQueueDeleteOk(const MethodFrame *frame);
     bool onQueuePurgeOk(const MethodFrame *frame);
 
+    bool onBasicQosOk(const MethodFrame *frame);
     bool onBasicConsumeOk(const MethodFrame *frame);
     bool onBasicDeliver(const MethodFrame *frame);
+    bool onBasicCancelOk(const MethodFrame *frame);
+    bool onBasicReturn(const MethodFrame *frame);
+    bool onBasicGetOk(const MethodFrame *frame);
+    bool onBasicGetEmpty(const MethodFrame *frame);
+    bool onBasicRecoverOk(const MethodFrame *frame);
+
+    bool onTxSelectOk(const MethodFrame *frame);
+    bool onTxCommitOk(const MethodFrame *frame);
+    bool onTxRollbackOk(const MethodFrame *frame);
 
     void incomingMessageComplete();
 public Q_SLOTS:
