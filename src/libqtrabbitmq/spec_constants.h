@@ -12,15 +12,15 @@ namespace spec {
 
 namespace domain {
 constexpr const FieldValue Bit = FieldValue::Bit;
-constexpr const FieldValue ClassId = FieldValue::ShortInt;
+constexpr const FieldValue ClassId = FieldValue::ShortUint;
 constexpr const FieldValue ConsumerTag = FieldValue::ShortString;
-constexpr const FieldValue DeliveryTag = FieldValue::LongLongInt;
+constexpr const FieldValue DeliveryTag = FieldValue::LongLongUint;
 constexpr const FieldValue ExchangeName = FieldValue::ShortString;
-constexpr const FieldValue Long = FieldValue::LongInt;
-constexpr const FieldValue LongLong = FieldValue::LongLongInt;
+constexpr const FieldValue Long = FieldValue::LongUint;
+constexpr const FieldValue LongLong = FieldValue::LongLongUint;
 constexpr const FieldValue LongStr = FieldValue::LongString;
-constexpr const FieldValue MessageCount = FieldValue::LongInt;
-constexpr const FieldValue MethodId = FieldValue::ShortInt;
+constexpr const FieldValue MessageCount = FieldValue::LongUint;
+constexpr const FieldValue MethodId = FieldValue::ShortUint;
 constexpr const FieldValue NoAck = FieldValue::Bit;
 constexpr const FieldValue NoLocal = FieldValue::Bit;
 constexpr const FieldValue NoWait = FieldValue::Bit;
@@ -29,9 +29,9 @@ constexpr const FieldValue Path = FieldValue::ShortString;
 constexpr const FieldValue PeerProperties = FieldValue::FieldTable;
 constexpr const FieldValue QueueName = FieldValue::ShortString;
 constexpr const FieldValue Redelivered = FieldValue::Bit;
-constexpr const FieldValue ReplyCode = FieldValue::ShortInt;
+constexpr const FieldValue ReplyCode = FieldValue::ShortUint;
 constexpr const FieldValue ReplyText = FieldValue::ShortString;
-constexpr const FieldValue Short = FieldValue::ShortInt;
+constexpr const FieldValue Short = FieldValue::ShortUint;
 constexpr const FieldValue ShortStr = FieldValue::ShortString;
 constexpr const FieldValue Table = FieldValue::FieldTable;
 constexpr const FieldValue Timestamp = FieldValue::Timestamp;

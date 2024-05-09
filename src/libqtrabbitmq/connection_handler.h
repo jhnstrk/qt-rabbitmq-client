@@ -22,10 +22,11 @@ public:
 
     bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
-    quint32 frameMaxSizeBytes() const { return m_frameMaxSizeBytes; }
+    quint32 maxFrameSizeBytes() const { return m_maxFrameSizeBytes; }
 
 Q_SIGNALS:
     void connectionOpened();
+    void connectionClosed(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
 protected:
     bool sendStartOk();
@@ -47,8 +48,17 @@ private:
     Client *m_client = nullptr;
     QTimer *m_heartbeatTimer = nullptr;
     quint16 m_channelMax = 255;
-    quint32 m_frameMaxSizeBytes = 1024 * 1024;
+    quint32 m_maxFrameSizeBytes = 1024 * 1024;
     quint16 m_heartbeatSeconds = 8;
+    struct CloseArgs
+    {
+        quint16 code = 0;
+        QString replyText;
+        quint16 classId;
+        quint16 methodId;
+        bool isServerInitiated = false;
+    };
+    CloseArgs m_closeReason;
 };
 
 } // namespace detail

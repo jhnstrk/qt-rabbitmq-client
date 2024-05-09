@@ -36,9 +36,9 @@ bool ConnectionHandler::handleMethodFrame(const MethodFrame *frame)
 
 bool ConnectionHandler::onStart(const MethodFrame *frame)
 {
-    bool ok = false;
-    const QVariantList args = frame->getArguments(&ok);
-    if (!ok) {
+    bool isOk = false;
+    const QVariantList args = frame->getArguments(&isOk);
+    if (!isOk) {
         qWarning() << "Failed to parse args";
         return false;
     }
@@ -59,9 +59,8 @@ bool ConnectionHandler::sendStartOk()
     const QByteArray response = auth.responseBytes("");
     const QString locale = "en_US";
     QVariantList args({clientProperties, mechanism, response, locale});
-    qDebug() << "Create Method frame" << response;
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::StartOk);
-    qDebug() << "Set method frame args" << args;
+    qDebug() << "Set startOk method frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
 }
@@ -88,7 +87,7 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
     }
 
     this->m_channelMax = channelMax;
-    this->m_frameMaxSizeBytes = frameMaxSizeBytes;
+    this->m_maxFrameSizeBytes = frameMaxSizeBytes;
     this->m_heartbeatSeconds = args.at(2).toInt(&ok);
 
     this->sendTuneOk() && this->sendOpen();
@@ -99,9 +98,9 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
 
 bool ConnectionHandler::sendTuneOk()
 {
-    QVariantList args({this->m_channelMax, this->m_frameMaxSizeBytes, this->m_heartbeatSeconds});
+    QVariantList args({this->m_channelMax, this->m_maxFrameSizeBytes, this->m_heartbeatSeconds});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::TuneOk);
-    qDebug() << "Set method frame args" << args;
+    qDebug() << "Set TuneOk method frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
 }
@@ -113,7 +112,7 @@ bool ConnectionHandler::sendOpen()
     const bool reserved2 = false; // insist
     QVariantList args({virtualHost, reserved1, reserved2});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Open);
-    qDebug() << "Set method frame args" << args;
+    qDebug() << "Set open method frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
 }
@@ -128,20 +127,21 @@ bool ConnectionHandler::onOpenOk(const MethodFrame *frame)
 
 bool ConnectionHandler::onClose(const MethodFrame *frame)
 {
-    bool ok = false;
-    const QVariantList args = frame->getArguments(&ok);
-    if (!ok) {
+    bool isOk = false;
+    const QVariantList args = frame->getArguments(&isOk);
+    if (!isOk) {
         qWarning() << "Failed to parse args";
         return false;
     }
     qDebug() << "Close" << args;
-    const int code = args.at(0).toInt();
-    const QString replyText = args.at(1).toString();
-    const int classId = args.at(2).toInt();
-    const int methodId = args.at(3).toInt();
-    qDebug() << "Received close" << code << replyText << classId << methodId;
+    m_closeReason.code = args.at(0).value<quint16>();
+    m_closeReason.replyText = args.at(1).toString();
+    m_closeReason.classId = args.at(2).value<quint16>();
+    m_closeReason.methodId = args.at(3).value<quint16>();
+    m_closeReason.isServerInitiated = true;
+    qDebug() << "Received close" << m_closeReason.code << m_closeReason.replyText
+             << m_closeReason.classId << m_closeReason.methodId;
     this->sendCloseOk();
-    m_client->disconnectFromHost();
     return true;
 }
 
@@ -149,7 +149,12 @@ bool ConnectionHandler::sendCloseOk()
 {
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::CloseOk);
     qDebug() << "Sending CloseOk";
-    return m_client->sendFrame(&frame);
+    const bool isOk = m_client->sendFrame(&frame);
+    emit connectionClosed(m_closeReason.code,
+                          m_closeReason.replyText,
+                          m_closeReason.classId,
+                          m_closeReason.methodId);
+    return isOk;
 }
 
 bool ConnectionHandler::sendClose(qint16 code,
@@ -157,9 +162,15 @@ bool ConnectionHandler::sendClose(qint16 code,
                                   quint16 classId,
                                   quint16 methodId)
 {
+    m_closeReason.code = code;
+    m_closeReason.replyText = replyText;
+    m_closeReason.classId = classId;
+    m_closeReason.methodId = methodId;
+    m_closeReason.isServerInitiated = false;
+
     QVariantList args({code, replyText, classId, methodId});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Close);
-    qDebug() << "Set close frame args" << args;
+    qDebug() << "Set connection.close frame args" << args;
     frame.setArguments(args);
     return m_client->sendFrame(&frame);
 }
@@ -169,7 +180,10 @@ bool ConnectionHandler::onCloseOk(const MethodFrame *frame)
     Q_UNUSED(frame);
     qDebug() << "CloseOk received";
     this->stopHeartbeat();
-    m_client->disconnectFromHost();
+    emit connectionClosed(m_closeReason.code,
+                          m_closeReason.replyText,
+                          m_closeReason.classId,
+                          m_closeReason.methodId);
     return true;
 }
 

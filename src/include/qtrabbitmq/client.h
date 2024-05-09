@@ -20,7 +20,7 @@ public:
     ~Client();
 
     QUrl connectionUrl() const;
-    void connectToHost(const QUrl &url);
+    bool connectToHost(const QUrl &url);
 
     QString virtualHost() const;
 
@@ -29,14 +29,18 @@ public:
 
     QString username() const;
     QString password() const;
+
+    qint64 maxFrameSizeBytes() const;
+
 Q_SIGNALS:
     void connected();
+    void disconnected();
 
 public Q_SLOTS:
     bool sendFrame(const Frame *f);
     bool sendHeartbeat();
 
-    void disconnectFromHost(qint16 code = 200,
+    void disconnectFromHost(quint16 code = 200,
                             const QString &replyText = QString(),
                             quint16 classId = 0,
                             quint16 methodId = 0);

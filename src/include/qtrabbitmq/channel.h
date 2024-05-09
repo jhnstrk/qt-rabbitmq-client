@@ -43,8 +43,8 @@ public:
 
     bool addConsumer(Consumer *c);
 
-    QFuture<void> openChannel();
-    QFuture<void> flow(bool active);
+    QFuture<void> channelOpen();
+    QFuture<void> channelFlow(bool active);
     QFuture<void> closeChannel(quint16 code = 200,
                                const QString &replyText = QString(),
                                quint16 classId = 0,
@@ -87,8 +87,8 @@ public:
     bool publish(const QString &exchangeName, const qmq::Message &message);
     bool recoverAsync(bool requeue);
     QFuture<void> recover(bool requeue);
-    bool ack(qint64 deliveryTag, bool muliple = false);
-    bool reject(qint64 deliveryTag, bool requeue);
+    bool ack(quint64 deliveryTag, bool muliple = false);
+    bool reject(quint64 deliveryTag, bool requeue);
 
     QFuture<void> txSelect();
     QFuture<void> txRollback();
@@ -102,11 +102,11 @@ public:
 protected:
     bool onChannelOpenOk(const MethodFrame *frame);
     bool onChannelFlow(const MethodFrame *frame);
-    bool flowOk(bool active);
+    bool channelFlowOk(bool active);
     bool onChannelFlowOk(const MethodFrame *frame);
     bool onChannelClose(const MethodFrame *frame);
     bool onChannelCloseOk(const MethodFrame *frame);
-    bool closeOk();
+    bool channelCloseOk();
 
     bool onExchangeDeclareOk(const MethodFrame *frame);
     bool onExchangeDeleteOk(const MethodFrame *frame);

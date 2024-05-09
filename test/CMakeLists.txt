@@ -8,7 +8,7 @@ set(CMAKE_AUTOMOC ON)
 
 enable_testing(true)
 
-set(test_items basic;frame_io;connect)
+set(test_items basic;frame_io;connect;pubsub)
 foreach(item IN LISTS test_items)
   qt_add_executable(tst_${item} tst_${item}.cpp)
   add_test(NAME tst_${item} COMMAND tst_${item})

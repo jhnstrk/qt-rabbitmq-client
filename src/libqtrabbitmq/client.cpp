@@ -50,6 +50,10 @@ Client::Client(QObject *parent)
             &detail::ConnectionHandler::connectionOpened,
             this,
             &Client::connected);
+    connect(d->connection.data(),
+            &detail::ConnectionHandler::connectionClosed,
+            this,
+            &Client::disconnected);
 }
 
 Client::~Client()
@@ -72,7 +76,15 @@ QUrl Client::connectionUrl() const
     return d->url;
 }
 
-void Client::connectToHost(const QUrl &url)
+qint64 Client::maxFrameSizeBytes() const
+{
+    if (d->connection) {
+        return d->connection->maxFrameSizeBytes();
+    }
+    return d->maxFrameSizeBytes;
+}
+
+bool Client::connectToHost(const QUrl &url)
 {
     bool useSsl = false;
     QString vhost = "/";
@@ -84,12 +96,12 @@ void Client::connectToHost(const QUrl &url)
         port = defaultSslPort;
     } else if (!url.scheme().isEmpty()) {
         qWarning() << "unknown scheme in URL";
-        return;
+        return false;
     }
 
     if (url.host().isEmpty()) {
         qWarning() << "invalid host in URL";
-        return;
+        return false;
     }
 
     if (!url.path().isEmpty()) {
@@ -117,6 +129,7 @@ void Client::connectToHost(const QUrl &url)
     } else {
         d->socket->connectToHost(url.host(), port);
     }
+    return true;
 }
 
 QString Client::virtualHost() const
@@ -139,7 +152,7 @@ void Client::onSocketConnected()
 void Client::onSocketReadyRead()
 {
     qDebug() << "Ready read";
-    const quint32 maxFrameSize = d->connection->frameMaxSizeBytes();
+    const quint32 maxFrameSize = d->connection->maxFrameSizeBytes();
     ErrorCode errCode = qmq::ErrorCode::NoError;
     std::unique_ptr<Frame> frame(Frame::readFrame(d->socket, maxFrameSize, &errCode));
     if (frame) {
@@ -194,7 +207,7 @@ void Client::onSocketReadyRead()
     }
 }
 
-void Client::disconnectFromHost(qint16 code,
+void Client::disconnectFromHost(quint16 code,
                                 const QString &replyText,
                                 quint16 classId,
                                 quint16 methodId)
@@ -204,7 +217,6 @@ void Client::disconnectFromHost(qint16 code,
         return;
     }
     d->connection->sendClose(code, replyText, classId, methodId);
-    d->socket->disconnectFromHost();
 }
 
 QSharedPointer<Channel> Client::createChannel()

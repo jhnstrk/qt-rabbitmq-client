@@ -133,7 +133,6 @@ int Channel::channelId() const
 
 bool Channel::handleMethodFrame(const MethodFrame *frame)
 {
-    // Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::spec::channel::ID_));
     Q_ASSERT(frame->channel() == this->channelId());
     switch (frame->classId()) {
     case qmq::spec::channel::ID_:
@@ -213,7 +212,7 @@ bool Channel::handleMethodFrame(const MethodFrame *frame)
         case qmq::spec::tx::RollbackOk:
             return this->onTxRollbackOk(frame);
         default:
-            qWarning() << "Unknown basic frame" << frame->methodId();
+            qWarning() << "Unknown tx frame" << frame->methodId();
             break;
         }
         break;
@@ -277,7 +276,7 @@ bool Channel::addConsumer(Consumer *c)
 
 // ----------------------------------------------------------------------------
 // Channel methods
-QFuture<void> Channel::openChannel()
+QFuture<void> Channel::channelOpen()
 {
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::Open);
     MessageItemVoidPtr messageTracker(new MessagePromise<void>(frame.classId(), frame.methodId()));
@@ -309,7 +308,7 @@ bool Channel::onChannelOpenOk(const MethodFrame *frame)
     return true;
 }
 
-QFuture<void> Channel::flow(bool active)
+QFuture<void> Channel::channelFlow(bool active)
 {
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::Flow);
     MessageItemVoidPtr messageTracker(new MessagePromise<void>(frame.classId(), frame.methodId()));
@@ -332,12 +331,12 @@ bool Channel::onChannelFlow(const MethodFrame *frame)
     bool isOk(false);
     const QVariantList args(frame->getArguments(&isOk));
     const bool active = args.at(0).toBool();
-    isOk = this->flowOk(active);
+    isOk = this->channelFlowOk(active);
 
     return isOk;
 }
 
-bool Channel::flowOk(bool active)
+bool Channel::channelFlowOk(bool active)
 {
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::FlowOk);
     const QVariantList args = {active};
@@ -367,7 +366,7 @@ QFuture<void> Channel::closeChannel(quint16 code,
         new MessagePromise<void>(spec::channel::ID_, spec::channel::Close));
     QVariantList args({code, replyText, classId, methodId});
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::Close);
-    qDebug() << "Set close frame args" << args;
+    qDebug() << "Set channel.close frame args" << args;
     frame.setArguments(args);
     messageTracker->promise.start();
     if (!d->client->sendFrame(&frame)) {
@@ -401,13 +400,13 @@ bool Channel::onChannelClose(const MethodFrame *frame)
     const quint16 methodId = args.at(3).value<quint16>();
     qDebug() << "Code:" << code << "replyText:" << replyText << "class, method: (" << classId << ","
              << methodId << ")";
-    return this->closeOk();
+    return this->channelCloseOk();
 }
 
-bool Channel::closeOk()
+bool Channel::channelCloseOk()
 {
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::CloseOk);
-    qDebug() << "Set closeOk frame args";
+    qDebug() << "Set channel.closeOk frame args";
     if (!d->client->sendFrame(&frame)) {
         qWarning() << "Unable to send CloseOK";
         return false;
@@ -852,7 +851,7 @@ bool Channel::publish(const QString &exchangeName, const qmq::Message &message)
     }
 
     qint64 writtenBytes = 0;
-    const qint64 maxFrameSize = 1024 * 1024; // TODO.
+    const qint64 maxFrameSize = d->client->maxFrameSizeBytes();
     const qint64 maxPayloadsize = maxFrameSize - 8;
     while (writtenBytes < payload.size()) {
         const qint64 len = std::min(maxPayloadsize, payload.size() - writtenBytes);
@@ -895,7 +894,7 @@ bool Channel::onBasicDeliver(const MethodFrame *frame)
         qWarning() << "Failed to get arguments";
     }
     const QString consumerTag = args.at(0).toString();
-    const qint64 deliveryTag = args.at(1).toLongLong();
+    const quint64 deliveryTag = args.at(1).toULongLong();
     const bool redelivered = args.at(2).toBool();
     const QString exchangeName = args.at(3).toString();
     const QString routingKey = args.at(4).toString();
@@ -973,7 +972,7 @@ bool Channel::onBasicGetEmpty(const MethodFrame *frame)
     return true;
 }
 
-bool Channel::ack(qint64 deliveryTag, bool muliple)
+bool Channel::ack(quint64 deliveryTag, bool muliple)
 {
     MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Ack);
 
@@ -989,7 +988,7 @@ bool Channel::ack(qint64 deliveryTag, bool muliple)
     return isOk;
 }
 
-bool Channel::reject(qint64 deliveryTag, bool requeue)
+bool Channel::reject(quint64 deliveryTag, bool requeue)
 {
     MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Reject);
 
@@ -1154,7 +1153,9 @@ void Channel::incomingMessageComplete()
 {
     qDebug() << "Message complete with delivery tag" << d->deliveringMessage->m_deliveryTag
              << "and size" << d->deliveringMessage->m_payload.size();
-    qDebug() << "payload" << QString::fromUtf8(d->deliveringMessage->m_payload);
+    qDebug() << "payload"
+             << (QString::fromUtf8(d->deliveringMessage->m_payload.left(64))
+                 + (d->deliveringMessage->m_payload.size() > 64 ? "...[truncated]" : ""));
 
     qmq::Message msg(d->deliveringMessage->m_properties,
                      d->deliveringMessage->m_payload,
