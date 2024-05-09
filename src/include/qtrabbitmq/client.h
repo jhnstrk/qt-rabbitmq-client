@@ -30,7 +30,12 @@ public:
     QString username() const;
     QString password() const;
 
-    qint64 maxFrameSizeBytes() const;
+    quint32 maxFrameSizeBytes() const;
+    void setMaxFrameSizeBytes(quint32 value);
+
+    quint16 maxChannelId() const;
+
+    quint16 heartbeatSeconds() const;
 
 Q_SIGNALS:
     void connected();

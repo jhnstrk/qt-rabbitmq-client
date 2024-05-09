@@ -38,7 +38,8 @@ public:
     quint32 maxFrameSizeBytes = 1024 * 1024;
     QHash<quint16, QSharedPointer<qmq::Channel>> channels;
     quint16 nextChannelId = 1;
-    quint16 maxChannelId = 100;
+    quint16 maxChannelId = 2047;
+    quint16 heartbeatSeconds = 60;
 };
 
 Client::Client(QObject *parent)
@@ -76,7 +77,7 @@ QUrl Client::connectionUrl() const
     return d->url;
 }
 
-qint64 Client::maxFrameSizeBytes() const
+quint32 Client::maxFrameSizeBytes() const
 {
     if (d->connection) {
         return d->connection->maxFrameSizeBytes();
@@ -84,8 +85,25 @@ qint64 Client::maxFrameSizeBytes() const
     return d->maxFrameSizeBytes;
 }
 
+void Client::setMaxFrameSizeBytes(quint32 value)
+{
+    d->maxFrameSizeBytes = value;
+}
+
+quint16 Client::maxChannelId() const
+{
+    return d->connection->maxChannelId();
+}
+
+quint16 Client::heartbeatSeconds() const
+{
+    return d->connection->heartbeatSeconds();
+}
+
 bool Client::connectToHost(const QUrl &url)
 {
+    d->connection->setTuneParameters(d->maxChannelId, d->maxFrameSizeBytes, d->heartbeatSeconds);
+
     bool useSsl = false;
     QString vhost = "/";
     quint16 port = defaultPort;
@@ -139,7 +157,7 @@ QString Client::virtualHost() const
 
 bool Client::sendFrame(const Frame *frame)
 {
-    const quint32 maxFrameSize = d->maxFrameSizeBytes;
+    const quint32 maxFrameSize = this->maxFrameSizeBytes();
     return Frame::writeFrame(d->socket, maxFrameSize, frame);
 }
 
@@ -221,9 +239,10 @@ void Client::disconnectFromHost(quint16 code,
 
 QSharedPointer<Channel> Client::createChannel()
 {
-    for (int i = 0; i < d->maxChannelId; i++) {
+    const int maxChannelId = d->connection->maxChannelId();
+    for (int i = 0; i < maxChannelId; i++) {
         const quint16 channelId = d->nextChannelId++;
-        if (d->nextChannelId > d->maxChannelId) {
+        if (d->nextChannelId > maxChannelId) {
             d->nextChannelId = 1;
         }
         if (!d->channels.contains(channelId)) {

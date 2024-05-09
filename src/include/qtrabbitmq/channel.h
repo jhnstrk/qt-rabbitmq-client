@@ -11,23 +11,39 @@
 namespace qmq {
 class Client;
 
-struct DeclareExchangeOptions
-{
-    bool passive = false;
-    bool durable = false;
-    bool noWait = false;
-    QVariantHash arguments;
+enum class DeclareExchangeOption {
+    NoOptions = 0x0,
+    Passive = 0x1,
+    Durable = 0x2,
+    NoWait = 0x3,
 };
+Q_DECLARE_FLAGS(DeclareExchangeOptions, DeclareExchangeOption)
 
-struct DeclareQueueOptions
-{
-    bool passive = false;
-    bool durable = false;
-    bool exclusive = false;
-    bool autoDelete = false;
-    bool noWait = false;
-    QVariantHash arguments;
+enum class DeclareQueueOption {
+    NoOptions = 0x0,
+    Passive = 0x1,
+    Durable = 0x2,
+    Exclusive = 0x4,
+    AutoDelete = 0x8,
+    NoWait = 0x10,
 };
+Q_DECLARE_FLAGS(DeclareQueueOptions, DeclareQueueOption)
+
+enum class PublishOption {
+    NoOptions = 0x0,
+    Mandatory = 0x1,
+    Immediate = 0x2,
+};
+Q_DECLARE_FLAGS(PublishOptions, PublishOption)
+
+enum class ConsumeOption {
+    NoOptions = 0x0,
+    NoLocal = 0x1,
+    NoAck = 0x2,
+    Exclusive = 0x4,
+    NoWait = 0x8,
+};
+Q_DECLARE_FLAGS(ConsumeOptions, ConsumeOption)
 
 class Channel : public QObject, public AbstractFrameHandler
 {
@@ -52,11 +68,15 @@ public:
 
     QFuture<void> declareExchange(const QString &exchangeName,
                                   ExchangeType type,
-                                  const DeclareExchangeOptions &opts = DeclareExchangeOptions());
+                                  const DeclareExchangeOptions opts
+                                  = DeclareExchangeOption::NoOptions,
+                                  const QVariantHash &arguments = QVariantHash());
     QFuture<void> deleteExchange(const QString &exchangeName);
 
     QFuture<QVariantList> declareQueue(const QString &queueName,
-                                       const DeclareQueueOptions &opts = DeclareQueueOptions());
+                                       const DeclareQueueOptions opts
+                                       = DeclareQueueOption::NoOptions,
+                                       const QVariantHash &arguments = QVariantHash());
     QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
     QFuture<void> unbindQueue(const QString &queueName, const QString &exchangeName);
 
@@ -67,15 +87,8 @@ public:
     QFuture<int> purgeQueue(const QString &queueName);
 
     // Client methods for the "Basic" API.
-    QFuture<void> qos(uint prefetchSize, ushort prefetchCount, bool global);
-    enum class ConsumeOption {
-        NoOptions = 0x0,
-        NoLocal = 0x1,
-        NoAck = 0x2,
-        Exclusive = 0x4,
-        NoWait = 0x8,
-    };
-    Q_DECLARE_FLAGS(ConsumeOptions, ConsumeOption)
+    QFuture<void> qos(quint32 prefetchSize, quint16 prefetchCount, bool global);
+
     QFuture<QString> consume(const QString &queueName,
                              const QString &consumerTag,
                              ConsumeOptions flags = ConsumeOption::NoOptions);
@@ -84,7 +97,13 @@ public:
     // If the queue isn't empty, return value is { message, messageCount }
     // If the queue is empty, the return is empty.
     QFuture<QVariantList> get(const QString &queueName, bool noAck);
-    bool publish(const QString &exchangeName, const qmq::Message &message);
+    bool publish(const qmq::Message &message, PublishOptions opts = PublishOption::NoOptions);
+    bool publish(const QString &payload,
+                 const QString &exchangeName,
+                 const QString &routingKey = QString(),
+                 const BasicPropertyHash &properties = BasicPropertyHash(),
+                 PublishOptions opts = PublishOption::NoOptions);
+
     bool recoverAsync(bool requeue);
     QFuture<void> recover(bool requeue);
     bool ack(quint64 deliveryTag, bool muliple = false);

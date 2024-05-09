@@ -8,16 +8,20 @@
 #include "qtrabbitmq.h"
 
 namespace qmq {
+
+using BasicPropertyHash = QHash<BasicProperty, QVariant>;
 class Message
 {
 public:
     Message() = default;
-    Message(const QHash<BasicProperty, QVariant> &properties,
-            const QByteArray &payload,
-            const QString &routingKey)
-        : m_properties(properties)
-        , m_payload(payload)
+    Message(const QByteArray &payload,
+            const QString &exchangeName,
+            const QString &routingKey,
+            const BasicPropertyHash &properties)
+        : m_payload(payload)
+        , m_exchangeName(exchangeName)
         , m_routingKey(routingKey)
+        , m_properties(properties)
     {}
 
     ~Message() = default;
@@ -56,12 +60,12 @@ public:
     QString exchangeName() const { return m_exchangeName; }
 
 private:
-    QHash<BasicProperty, QVariant> m_properties;
     QByteArray m_payload;
+    QString m_exchangeName;
     QString m_routingKey;
+    BasicPropertyHash m_properties;
     quint64 m_deliveryTag = 0;
     bool m_redelivered = false;
-    QString m_exchangeName;
 };
 
 } // namespace qmq

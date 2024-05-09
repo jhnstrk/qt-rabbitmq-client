@@ -104,9 +104,10 @@ private Q_SLOTS:
         qmq::Message msg;
         msg.setProperty(qmq::BasicProperty::ContentType, ctTextPlain);
         msg.setProperty(qmq::BasicProperty::ContentEncoding, ceUtf8);
+        msg.setExchangeName(exchangeName);
         msg.setPayload(testMessage());
 
-        QVERIFY(pubChannel->publish(exchangeName, msg));
+        QVERIFY(pubChannel->publish(msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
@@ -156,9 +157,10 @@ private Q_SLOTS:
         qmq::Message msg;
         msg.setProperty(qmq::BasicProperty::ContentType, ctTextPlain);
         msg.setProperty(qmq::BasicProperty::ContentEncoding, ceUtf8);
+        msg.setExchangeName(exchangeName);
         msg.setPayload(testMessage("testPubSubOneClientTwoChannels"));
 
-        QVERIFY(pubChannel->publish(exchangeName, msg));
+        QVERIFY(pubChannel->publish(msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
@@ -192,19 +194,20 @@ private Q_SLOTS:
         QVERIFY(waitForFuture(theChannel->declareQueue(queueName)));
         QVERIFY(waitForFuture(theChannel->bindQueue(queueName, exchangeName)));
         //Add consumer
-        qmq::Consumer c;
-        QVERIFY(waitForFuture(c.consume(theChannel.get(), queueName)));
-        QSignalSpy subMessageSpy(&c, &qmq::Consumer::messageReady);
+        qmq::Consumer consumer;
+        QVERIFY(waitForFuture(consumer.consume(theChannel.get(), queueName)));
+        QSignalSpy subMessageSpy(&consumer, &qmq::Consumer::messageReady);
 
         qmq::Message msg;
         msg.setProperty(qmq::BasicProperty::ContentType, ctTextPlain);
         msg.setProperty(qmq::BasicProperty::ContentEncoding, ceUtf8);
+        msg.setExchangeName(exchangeName);
         msg.setPayload(testMessage("PubSubOneClientOneChannel"));
 
-        QVERIFY(theChannel->publish(exchangeName, msg));
+        QVERIFY(theChannel->publish(msg));
 
         QVERIFY(subMessageSpy.wait(5000));
-        qmq::Message deliveredMsg = c.dequeueMessage();
+        qmq::Message deliveredMsg = consumer.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
@@ -247,10 +250,11 @@ private Q_SLOTS:
             qmq::Message msg;
             msg.setProperty(qmq::BasicProperty::ContentType, "application/octet-stream");
             msg.setProperty(qmq::BasicProperty::ContentEncoding, ceBinary);
+            msg.setExchangeName(exchangeName);
             const QByteArray payload = randomBytes(1024);
             msg.setPayload(payload);
 
-            QVERIFY(pubChannel->publish(exchangeName, msg));
+            QVERIFY(pubChannel->publish(msg));
 
             QVERIFY(subMessageSpy.wait(5000));
             qmq::Message deliveredMsg = consumer.dequeueMessage();
@@ -259,6 +263,7 @@ private Q_SLOTS:
                      "application/octet-stream");
             QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(),
                      ceBinary);
+            QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
         }
 
         {
@@ -266,10 +271,11 @@ private Q_SLOTS:
             qmq::Message msg;
             msg.setProperty(qmq::BasicProperty::ContentType, "application/octet-stream");
             msg.setProperty(qmq::BasicProperty::ContentEncoding, ceBinary);
+            msg.setExchangeName(exchangeName);
             const QByteArray payload = randomBytes(1024 * 1024);
             msg.setPayload(payload);
 
-            QVERIFY(pubChannel->publish(exchangeName, msg));
+            QVERIFY(pubChannel->publish(msg));
 
             QVERIFY(subMessageSpy.wait(5000));
             qmq::Message deliveredMsg = consumer.dequeueMessage();
@@ -278,6 +284,7 @@ private Q_SLOTS:
                      "application/octet-stream");
             QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(),
                      ceBinary);
+            QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
         }
         QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
         QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));

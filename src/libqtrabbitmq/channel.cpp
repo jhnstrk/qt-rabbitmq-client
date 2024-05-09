@@ -418,7 +418,8 @@ bool Channel::channelCloseOk()
 // Exchange methods.
 QFuture<void> Channel::declareExchange(const QString &exchangeName,
                                        ExchangeType type,
-                                       const DeclareExchangeOptions &opts)
+                                       DeclareExchangeOptions opts,
+                                       const QVariantHash &arguments)
 {
     MessageItemVoidPtr messageTracker(
         new MessagePromise<void>(spec::exchange::ID_, spec::exchange::Declare));
@@ -431,12 +432,12 @@ QFuture<void> Channel::declareExchange(const QString &exchangeName,
     QVariantList args({reserved1,
                        exchangeName,
                        exchangeType,
-                       opts.passive,
-                       opts.durable,
+                       opts.testFlag(DeclareExchangeOption::Passive),
+                       opts.testFlag(DeclareExchangeOption::Durable),
                        reserved2,
                        reserved3,
-                       opts.noWait,
-                       opts.arguments});
+                       opts.testFlag(DeclareExchangeOption::NoWait),
+                       arguments});
     qDebug() << "Set declare exchange method" << d->channelId << "frame args" << args;
     frame.setArguments(args);
     bool isOk = d->client->sendFrame(&frame);
@@ -504,7 +505,8 @@ bool Channel::onExchangeDeleteOk(const MethodFrame *frame)
 // ----------------------------------------------------------------------------
 // Queue methods
 QFuture<QVariantList> Channel::declareQueue(const QString &queueName,
-                                            const DeclareQueueOptions &opts)
+                                            DeclareQueueOptions opts,
+                                            const QVariantHash &arguments)
 {
     MethodFrame frame(d->channelId, spec::queue::ID_, spec::queue::Declare);
     MessageVlistPtr messageTracker(
@@ -513,12 +515,12 @@ QFuture<QVariantList> Channel::declareQueue(const QString &queueName,
     const short reserved1 = 0;
     QVariantList args({reserved1,
                        queueName,
-                       opts.passive,
-                       opts.durable,
-                       opts.exclusive,
-                       opts.autoDelete,
-                       opts.noWait,
-                       opts.arguments});
+                       opts.testFlag(DeclareQueueOption::Passive),
+                       opts.testFlag(DeclareQueueOption::Durable),
+                       opts.testFlag(DeclareQueueOption::Exclusive),
+                       opts.testFlag(DeclareQueueOption::AutoDelete),
+                       opts.testFlag(DeclareQueueOption::NoWait),
+                       arguments});
     qDebug() << "Set declare queue method" << d->channelId << "frame args" << args;
     frame.setArguments(args);
     bool isOk = d->client->sendFrame(&frame);
@@ -824,15 +826,32 @@ bool Channel::onBasicCancelOk(const MethodFrame *frame)
     return true;
 }
 
-bool Channel::publish(const QString &exchangeName, const qmq::Message &message)
+bool Channel::publish(const QString &message,
+                      const QString &exchangeName,
+                      const QString &routingKey,
+                      const BasicPropertyHash &properties,
+                      PublishOptions opts)
+{
+    qmq::Message msg(message.toUtf8(), exchangeName, routingKey, properties);
+    if (!properties.contains(qmq::BasicProperty::ContentType)) {
+        msg.setProperty(qmq::BasicProperty::ContentType, QStringLiteral("text/plain"));
+    }
+    if (!properties.contains(qmq::BasicProperty::ContentEncoding)) {
+        msg.setProperty(qmq::BasicProperty::ContentEncoding, QStringLiteral("utf-8"));
+    }
+    return publish(msg, opts);
+}
+
+bool Channel::publish(const qmq::Message &message, PublishOptions opts)
 {
     MethodFrame frame(d->channelId, spec::basic::ID_, spec::basic::Publish);
 
     // Short, ExchangeName, ShortStr, Bit, Bit
     const short reserved1 = 0;
+    const QString exchangeName = message.exchangeName();
     const QString routingKey = message.routingKey();
-    const bool mandatory = false;
-    const bool immediate = false;
+    const bool mandatory = opts.testFlag(PublishOption::Mandatory);
+    const bool immediate = opts.testFlag(PublishOption::Immediate);
     const QVariantList args({reserved1, exchangeName, routingKey, mandatory, immediate});
     qDebug() << "Set publish method" << d->channelId << "frame args" << args;
     frame.setArguments(args);
@@ -1157,12 +1176,12 @@ void Channel::incomingMessageComplete()
              << (QString::fromUtf8(d->deliveringMessage->m_payload.left(64))
                  + (d->deliveringMessage->m_payload.size() > 64 ? "...[truncated]" : ""));
 
-    qmq::Message msg(d->deliveringMessage->m_properties,
-                     d->deliveringMessage->m_payload,
-                     d->deliveringMessage->m_routingKey);
+    qmq::Message msg(d->deliveringMessage->m_payload,
+                     d->deliveringMessage->m_exchangeName,
+                     d->deliveringMessage->m_routingKey,
+                     d->deliveringMessage->m_properties);
     msg.setDeliveryTag(d->deliveringMessage->m_deliveryTag);
     msg.setRedelivered(d->deliveringMessage->m_redelivered);
-    msg.setExchangeName(d->deliveringMessage->m_exchangeName);
 
     if (d->deliveringMessage->m_isGet) {
         MessageItemPtr messageTracker(d->popFirstMessageItem(spec::basic::ID_, spec::basic::Get));

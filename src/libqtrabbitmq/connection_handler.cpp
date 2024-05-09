@@ -13,6 +13,15 @@ ConnectionHandler::ConnectionHandler(Client *client)
     : m_client(client)
 {}
 
+void ConnectionHandler::setTuneParameters(quint16 channelMax,
+                                          quint32 maxFrameSizeBytes,
+                                          quint16 heartbeatSeconds)
+{
+    this->m_channelMax = channelMax;
+    this->m_maxFrameSizeBytes = maxFrameSizeBytes;
+    this->m_heartbeatSeconds = heartbeatSeconds;
+}
+
 bool ConnectionHandler::handleMethodFrame(const MethodFrame *frame)
 {
     Q_ASSERT(frame->classId() == static_cast<quint16>(qmq::spec::connection::ID_));
@@ -58,7 +67,7 @@ bool ConnectionHandler::sendStartOk()
     const QString mechanism = auth.mechanism();
     const QByteArray response = auth.responseBytes("");
     const QString locale = "en_US";
-    QVariantList args({clientProperties, mechanism, response, locale});
+    const QVariantList args({clientProperties, mechanism, response, locale});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::StartOk);
     qDebug() << "Set startOk method frame args" << args;
     frame.setArguments(args);
@@ -75,24 +84,33 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
     }
     qDebug() << "Tune" << args;
 
-    quint16 channelMax = args.at(0).toUInt(&ok);
-    if (channelMax == 0) {
-        // zero means no limit is specfied. Chose something.
-        channelMax = 2047;
-    }
-    quint64 frameMaxSizeBytes = args.at(1).toULongLong(&ok);
-    if (frameMaxSizeBytes == 0) {
-        // zero means no limit is specfied. Chose something.
-        frameMaxSizeBytes = 1024 * 1024;
+    const quint16 channelMax = args.at(0).toUInt(&ok);
+    if (channelMax != 0) {
+        // zero means no limit is specfied. Choose something.
+        this->m_channelMax = std::min(channelMax, this->m_channelMax);
     }
 
-    this->m_channelMax = channelMax;
-    this->m_maxFrameSizeBytes = frameMaxSizeBytes;
-    this->m_heartbeatSeconds = args.at(2).toInt(&ok);
+    const quint32 frameMaxSizeBytes = args.at(1).toUInt(&ok);
+    if (frameMaxSizeBytes != 0) {
+        // zero means no limit is specfied. Chose something.
+        this->m_maxFrameSizeBytes = std::min(frameMaxSizeBytes, this->m_maxFrameSizeBytes);
+    }
 
-    this->sendTuneOk() && this->sendOpen();
+    const quint16 heartbeatSeconds = args.at(2).toUInt(&ok);
+    if (heartbeatSeconds != 0) {
+        // zero means no heartbeat is desired.
+        this->m_heartbeatSeconds = std::min(heartbeatSeconds, this->m_heartbeatSeconds);
+    }
 
-    this->startHeartbeat();
+    if (!this->sendTuneOk()) {
+        return false;
+    }
+    if (!this->sendOpen()) {
+        return false;
+    }
+    if (!this->startHeartbeat()) {
+        return false;
+    }
     return true;
 }
 
@@ -110,7 +128,7 @@ bool ConnectionHandler::sendOpen()
     const QString virtualHost = m_client->virtualHost();
     const QString reserved1;      // capabilities
     const bool reserved2 = false; // insist
-    QVariantList args({virtualHost, reserved1, reserved2});
+    const QVariantList args({virtualHost, reserved1, reserved2});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Open);
     qDebug() << "Set open method frame args" << args;
     frame.setArguments(args);
