@@ -228,8 +228,8 @@ bool writeAmqpShortString(QIODevice *io, const QByteArray &value)
         return false;
     }
     const quint8 len = value.size();
-    bool ok = writeAmqp<quint8>(io, len);
-    if (!ok) {
+    bool isOk = writeAmqp<quint8>(io, len);
+    if (!isOk) {
         return false;
     }
     if (io->write(value) != len) {
@@ -302,8 +302,8 @@ bool writeAmqpLongString(QIODevice *io, const QByteArray &value)
         qWarning() << "string too long";
         return false;
     }
-    bool ok = writeAmqp<quint32>(io, len);
-    if (!ok) {
+    const bool isOk = writeAmqp<quint32>(io, len);
+    if (!isOk) {
         qWarning() << "Error writing value";
         return false;
     }
@@ -389,15 +389,15 @@ bool writeAmqpFieldArray(QIODevice *io, const QVariantList &value)
         }
 
         for (const QVariant &item : value) {
-            bool ok = qmq::Frame::writeFieldValue(&packedIo, item);
-            if (!ok) {
+            const bool isOk = qmq::Frame::writeFieldValue(&packedIo, item);
+            if (!isOk) {
                 return false;
             }
         }
     }
     const quint32 len = packedBuffer.size();
-    bool ok = writeAmqp<quint32>(io, len);
-    if (!ok)
+    const bool isOk = writeAmqp<quint32>(io, len);
+    if (!isOk)
         return false;
     if (!io->write(packedBuffer)) {
         return false;
@@ -485,19 +485,19 @@ bool writeAmqpFieldTable(QIODevice *io, const QVariantHash &value)
         }
 
         for (auto it = value.constKeyValueBegin(); it != value.constKeyValueEnd(); ++it) {
-            bool ok = writeAmqpShortString(&packedIo, it->first);
-            if (!ok) {
+            bool isOk = writeAmqpShortString(&packedIo, it->first);
+            if (!isOk) {
                 return false;
             }
-            ok = qmq::Frame::writeFieldValue(&packedIo, it->second);
-            if (!ok) {
+            isOk = qmq::Frame::writeFieldValue(&packedIo, it->second);
+            if (!isOk) {
                 return false;
             }
         }
     }
     const quint32 len = packedBuffer.size();
-    bool ok = writeAmqp<quint32>(io, len);
-    if (!ok)
+    const bool isOk = writeAmqp<quint32>(io, len);
+    if (!isOk)
         return false;
 
     if (io->write(packedBuffer) != packedBuffer.size()) {
@@ -727,8 +727,8 @@ bool qmq::Frame::writeFieldValue(QIODevice *io, const QVariant &value)
 
 bool qmq::Frame::writeFieldValue(QIODevice *io, const QVariant &value, FieldValue valueType)
 {
-    const bool ok = writeAmqp<quint8>(io, static_cast<quint8>(valueType));
-    if (!ok) {
+    const bool isOk = writeAmqp<quint8>(io, static_cast<quint8>(valueType));
+    if (!isOk) {
         return false;
     }
 
@@ -785,7 +785,7 @@ bool qmq::Frame::writeNativeFieldValues(QIODevice *io,
                                         const QVariantList &values,
                                         const QList<FieldValue> &types)
 {
-    bool ok = true;
+    bool isOk = true;
     int bitPos = 0;
     quint8 bitBuffer = 0;
     for (qsizetype i = 0; i < types.size(); ++i) {
@@ -809,21 +809,21 @@ bool qmq::Frame::writeNativeFieldValues(QIODevice *io,
         }
         if ((bitPos == 8)
             || (bitPos > 0 && ((type != FieldValue::Bit) || (i == types.size() - 1)))) {
-            ok = writeAmqp<quint8>(io, bitBuffer);
-            if (!ok) {
+            isOk = writeAmqp<quint8>(io, bitBuffer);
+            if (!isOk) {
                 return false;
             }
             bitBuffer = 0;
             bitPos = 0;
         }
         if (type != FieldValue::Bit) {
-            ok = writeNativeFieldValue(io, value, type);
+            isOk = writeNativeFieldValue(io, value, type);
         }
-        if (!ok) {
+        if (!isOk) {
             return false;
         }
     }
-    return ok;
+    return isOk;
 }
 
 std::unique_ptr<qmq::Frame> qmq::Frame::readFrame(QIODevice *io,
@@ -868,11 +868,11 @@ std::unique_ptr<qmq::Frame> qmq::Frame::readFrame(QIODevice *io,
         return std::unique_ptr<qmq::Frame>();
     }
 
-    bool ok;
-    const quint8 endByte = readAmqp<quint8>(io, &ok);
-    if (!ok || endByte != FrameEndChar) {
+    bool isOk = false;
+    const quint8 endByte = readAmqp<quint8>(io, &isOk);
+    if (!isOk || endByte != FrameEndChar) {
         *err = ErrorCode::InvalidFrameData;
-        qWarning() << "Frame end byte invalid or could not be read" << (int) endByte << (ok);
+        qWarning() << "Frame end byte invalid or could not be read" << (int) endByte << (isOk);
         return std::unique_ptr<qmq::Frame>();
     }
     qDebug() << ":Frame::readFrame Construct frame from data. channel:" << channel
@@ -906,13 +906,13 @@ bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
         qWarning() << "Cannot write frame: too large.";
         return false;
     }
-    bool ok = writeAmqp<quint8>(io, t);
-    ok = ok && writeAmqp<quint16>(io, channel);
-    ok = ok && writeAmqp<quint32>(io, size);
-    ok = ok && (io->write(content) == content.size());
-    ok = ok && writeAmqp<quint8>(io, FrameEndChar);
-    qDebug() << "Written frame" << (ok ? "OK" : "FAILED") << "with size" << size;
-    return ok;
+    bool isOk = writeAmqp<quint8>(io, t);
+    isOk = isOk && writeAmqp<quint16>(io, channel);
+    isOk = isOk && writeAmqp<quint32>(io, size);
+    isOk = isOk && (io->write(content) == content.size());
+    isOk = isOk && writeAmqp<quint8>(io, FrameEndChar);
+    qDebug() << "Written frame" << (isOk ? "OK" : "FAILED") << "with size" << size;
+    return isOk;
 }
 
 std::unique_ptr<qmq::BodyFrame> qmq::BodyFrame::fromContent(quint16 channel,
@@ -925,9 +925,9 @@ std::unique_ptr<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
 {
     QBuffer io;
     io.setData(content);
-    bool ok = io.open(QIODevice::ReadOnly);
-    const quint16 classId = readAmqp<quint16>(&io, &ok);
-    const quint16 methodId = readAmqp<quint16>(&io, &ok);
+    bool isOk = io.open(QIODevice::ReadOnly);
+    const quint16 classId = readAmqp<quint16>(&io, &isOk);
+    const quint16 methodId = readAmqp<quint16>(&io, &isOk);
     const QByteArray arguments = content.mid(4);
     return std::unique_ptr<qmq::MethodFrame>(new MethodFrame(channel, classId, methodId, arguments));
 }
@@ -936,11 +936,11 @@ QByteArray qmq::MethodFrame::content() const
 {
     qDebug() << "Get method content";
     QBuffer io;
-    bool ok = io.open(QIODevice::WriteOnly);
-    ok = ok && writeAmqp<quint16>(&io, this->classId());
-    ok = ok && writeAmqp<quint16>(&io, this->methodId());
-    ok = ok && (io.write(this->m_arguments) == this->m_arguments.size());
-    if (!ok) {
+    bool isOk = io.open(QIODevice::WriteOnly);
+    isOk = isOk && writeAmqp<quint16>(&io, this->classId());
+    isOk = isOk && writeAmqp<quint16>(&io, this->methodId());
+    isOk = isOk && (io.write(this->m_arguments) == this->m_arguments.size());
+    if (!isOk) {
         qWarning() << "Failed writing frame content";
     }
     io.close();
@@ -954,7 +954,7 @@ QVariantList qmq::MethodFrame::getArguments(bool *ok) const
     io.setData(this->m_arguments);
     bool isOk = io.open(QIODevice::ReadOnly);
     if (!isOk) {
-        if (ok)
+        if (ok != nullptr)
             *ok = false;
         qWarning() << "Unable to open stream for reading";
         return QVariantList();
@@ -970,14 +970,14 @@ bool qmq::MethodFrame::setArguments(const QVariantList &values)
         return false;
     }
     QBuffer io;
-    bool ok = io.open(QIODevice::WriteOnly);
-    if (!ok) {
+    bool isOk = io.open(QIODevice::WriteOnly);
+    if (!isOk) {
         return false;
     }
-    ok = Frame::writeNativeFieldValues(&io, values, types);
+    isOk = Frame::writeNativeFieldValues(&io, values, types);
     io.close();
     this->m_arguments = io.buffer();
-    return ok;
+    return isOk;
 }
 
 qmq::HeaderFrame::HeaderFrame(quint16 channel,
@@ -995,12 +995,12 @@ std::unique_ptr<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
 {
     QBuffer io;
     io.setData(content);
-    bool ok = io.open(QIODevice::ReadOnly);
-    const quint16 classId = readAmqp<quint16>(&io, &ok);
-    /* const quint16 weight = */ readAmqp<quint16>(&io, &ok);
-    const quint64 contentSize = readAmqp<quint64>(&io, &ok);
-    const quint16 propertyFlags = readAmqp<quint16>(&io, &ok);
-    if (!ok) {
+    bool isOk = io.open(QIODevice::ReadOnly);
+    const quint16 classId = readAmqp<quint16>(&io, &isOk);
+    /* const quint16 weight = */ readAmqp<quint16>(&io, &isOk);
+    const quint64 contentSize = readAmqp<quint64>(&io, &isOk);
+    const quint16 propertyFlags = readAmqp<quint16>(&io, &isOk);
+    if (!isOk) {
         qWarning() << "Buffer not opened";
         return std::unique_ptr<qmq::HeaderFrame>();
     }
@@ -1009,7 +1009,7 @@ std::unique_ptr<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
     for (unsigned int i = 0; i < std::size(spec::basicPropertyTypes); ++i) {
         if ((propertyFlags & ((1 << 15) >> i)) != 0) {
             const FieldValue propType = spec::basicPropertyTypes[i];
-            const QVariant value = Frame::readNativeFieldValue(&io, propType, &ok);
+            const QVariant value = Frame::readNativeFieldValue(&io, propType, &isOk);
             const BasicProperty propId = static_cast<BasicProperty>(i);
             properties.insert(propId, value);
         }
@@ -1037,28 +1037,28 @@ QByteArray qmq::HeaderFrame::content() const
         orderedTypes.push_back(spec::basicPropertyTypes[itIndex]);
     }
     QBuffer io;
-    bool ok = io.open(QIODevice::WriteOnly);
-    if (!ok) {
+    bool isOk = io.open(QIODevice::WriteOnly);
+    if (!isOk) {
         qWarning() << "Buffer not opened";
         return QByteArray();
     }
     do {
-        ok = writeAmqp<quint16>(&io, this->classId());
-        if (!ok)
+        isOk = writeAmqp<quint16>(&io, this->classId());
+        if (!isOk)
             break;
-        ok = writeAmqp<quint16>(&io, 0); // weight.
-        if (!ok)
+        isOk = writeAmqp<quint16>(&io, 0); // weight.
+        if (!isOk)
             break;
-        ok = writeAmqp<quint64>(&io, this->contentSize());
-        if (!ok)
+        isOk = writeAmqp<quint64>(&io, this->contentSize());
+        if (!isOk)
             break;
-        ok = writeAmqp<quint16>(&io, propertyFlags);
-        if (!ok)
+        isOk = writeAmqp<quint16>(&io, propertyFlags);
+        if (!isOk)
             break;
-        ok = Frame::writeNativeFieldValues(&io, orderedValues, orderedTypes);
+        isOk = Frame::writeNativeFieldValues(&io, orderedValues, orderedTypes);
     } while (false);
     io.close();
-    if (!ok) {
+    if (!isOk) {
         qWarning() << "Error writing field values";
         return QByteArray();
     }
