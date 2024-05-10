@@ -142,8 +142,13 @@ QList<qmq::FieldValue> methodArgs(quint16 methodClass, quint16 methodId)
         }
         break;
     case spec::confirm::ID_:
+        // RabbitMQ extension. https://www.rabbitmq.com/amqp-0-9-1-quickref
         switch (methodId) {
             using namespace spec::confirm;
+        case Select:
+            return {NoWait};
+        case SelectOk:
+            return {};
         default:
             break;
         }

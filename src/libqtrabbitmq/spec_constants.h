@@ -67,8 +67,9 @@ constexpr const quint16 ID_ = 60, Qos = 10, QosOk = 11, Consume = 20, ConsumeOk 
 };
 
 namespace confirm {
+// This is a RabbitMQ extension class
 constexpr const quint16 ID_ = 85, Select = 10, SelectOk = 11;
-};
+}; // namespace confirm
 
 namespace tx {
 constexpr const quint16 ID_ = 90, Select = 10, SelectOk = 11, Commit = 20, CommitOk = 21,

@@ -47,7 +47,7 @@ private Q_SLOTS:
             QVERIFY(!channelFut.isCanceled());
         }
         {
-            QFuture<void> channelFut = channel->closeChannel(200, // constants::ReplySuccess,
+            QFuture<void> channelFut = channel->channelClose(200, // constants::ReplySuccess,
                                                              "OK",
                                                              0,
                                                              0);

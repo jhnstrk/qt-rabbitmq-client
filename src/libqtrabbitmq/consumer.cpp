@@ -44,7 +44,7 @@ bool Consumer::hasMessage() const
 QFuture<QString> Consumer::consume(Channel *channel, const QString &queueName)
 {
     channel->addConsumer(this);
-    return channel->consume(queueName, this->consumerTag());
+    return channel->basicConsume(queueName, this->consumerTag());
 }
 
 Message Consumer::dequeueMessage()

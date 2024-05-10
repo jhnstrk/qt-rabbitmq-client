@@ -60,9 +60,9 @@ private Q_SLOTS:
         QVERIFY(waitForFuture(pubChannel->channelOpen()));
         const QString exchangeName = "my-messages";
         const QString queueName = "my-queue";
-        QVERIFY(waitForFuture(pubChannel->purgeQueue(queueName)));
-        QVERIFY(waitForFuture(pubChannel->deleteExchange(exchangeName)));
-        QVERIFY(waitForFuture(pubChannel->closeChannel()));
+        QVERIFY(waitForFuture(pubChannel->queuePurge(queueName)));
+        QVERIFY(waitForFuture(pubChannel->exchangeDelete(exchangeName)));
+        QVERIFY(waitForFuture(pubChannel->channelClose()));
         client.disconnectFromHost();
         QVERIFY(disconnectSpy.wait(smallWaitMs));
     }
@@ -81,8 +81,8 @@ private Q_SLOTS:
         const QString exchangeName = "my-messages";
         const QString queueName = "my-queue";
         QVERIFY(waitForFuture(
-            pubChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
-        QVERIFY(waitForFuture(pubChannel->declareQueue(queueName)));
+            pubChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(pubChannel->queueDeclare(queueName)));
 
         qmq::Client subClient;
         QSignalSpy subSpy(&subClient, &qmq::Client::connected);
@@ -93,9 +93,9 @@ private Q_SLOTS:
 
         QVERIFY(waitForFuture(subChannel->channelOpen()));
         QVERIFY(waitForFuture(
-            subChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
-        QVERIFY(waitForFuture(subChannel->declareQueue(queueName)));
-        QVERIFY(waitForFuture(subChannel->bindQueue(queueName, exchangeName)));
+            subChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(subChannel->queueDeclare(queueName)));
+        QVERIFY(waitForFuture(subChannel->queueBind(queueName, exchangeName)));
         //Add consumer
         qmq::Consumer c;
         QVERIFY(waitForFuture(c.consume(subChannel.get(), queueName)));
@@ -107,17 +107,17 @@ private Q_SLOTS:
         msg.setExchangeName(exchangeName);
         msg.setPayload(testMessage());
 
-        QVERIFY(pubChannel->publish(msg));
+        QVERIFY(pubChannel->basicPublish(msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
-        QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
+        QVERIFY(subChannel->basicAck(deliveredMsg.deliveryTag()));
 
-        QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
-        QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(pubChannel->channelClose(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(subChannel->channelClose(200, "OK", 0, 0)));
 
         qDebug() << "pubClient . disconnectFromHost..";
         pubClient.disconnectFromHost();
@@ -142,13 +142,13 @@ private Q_SLOTS:
         const QString exchangeName = "my-messages";
         const QString queueName = "my-queue";
         QVERIFY(waitForFuture(
-            pubChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
-        QVERIFY(waitForFuture(pubChannel->declareQueue(queueName)));
+            pubChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(pubChannel->queueDeclare(queueName)));
 
         auto subChannel = client.createChannel();
 
         QVERIFY(waitForFuture(subChannel->channelOpen()));
-        QVERIFY(waitForFuture(subChannel->bindQueue(queueName, exchangeName)));
+        QVERIFY(waitForFuture(subChannel->queueBind(queueName, exchangeName)));
         //Add consumer
         qmq::Consumer c("test-consumer1");
         QVERIFY(waitForFuture(c.consume(subChannel.get(), queueName)));
@@ -160,17 +160,17 @@ private Q_SLOTS:
         msg.setExchangeName(exchangeName);
         msg.setPayload(testMessage("testPubSubOneClientTwoChannels"));
 
-        QVERIFY(pubChannel->publish(msg));
+        QVERIFY(pubChannel->basicPublish(msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = c.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
-        QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
+        QVERIFY(subChannel->basicAck(deliveredMsg.deliveryTag()));
 
-        QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
-        QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(pubChannel->channelClose(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(subChannel->channelClose(200, "OK", 0, 0)));
 
         client.disconnectFromHost();
         QVERIFY(disconnectSpy.wait(smallWaitMs));
@@ -190,9 +190,9 @@ private Q_SLOTS:
         const QString exchangeName = "my-messages";
         const QString queueName = "my-queue";
         QVERIFY(waitForFuture(
-            theChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
-        QVERIFY(waitForFuture(theChannel->declareQueue(queueName)));
-        QVERIFY(waitForFuture(theChannel->bindQueue(queueName, exchangeName)));
+            theChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(theChannel->queueDeclare(queueName)));
+        QVERIFY(waitForFuture(theChannel->queueBind(queueName, exchangeName)));
         //Add consumer
         qmq::Consumer consumer;
         QVERIFY(waitForFuture(consumer.consume(theChannel.get(), queueName)));
@@ -204,16 +204,16 @@ private Q_SLOTS:
         msg.setExchangeName(exchangeName);
         msg.setPayload(testMessage("PubSubOneClientOneChannel"));
 
-        QVERIFY(theChannel->publish(msg));
+        QVERIFY(theChannel->basicPublish(msg));
 
         QVERIFY(subMessageSpy.wait(5000));
         qmq::Message deliveredMsg = consumer.dequeueMessage();
         QCOMPARE(deliveredMsg.payload(), msg.payload());
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentType).toString(), ctTextPlain);
         QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(), ceUtf8);
-        QVERIFY(theChannel->ack(deliveredMsg.deliveryTag()));
+        QVERIFY(theChannel->basicAck(deliveredMsg.deliveryTag()));
 
-        QVERIFY(waitForFuture(theChannel->closeChannel(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(theChannel->channelClose(200, "OK", 0, 0)));
 
         client.disconnectFromHost();
         QVERIFY(disconnectSpy.wait(smallWaitMs));
@@ -233,13 +233,13 @@ private Q_SLOTS:
         const QString exchangeName = "my-messages";
         const QString queueName = "my-queue";
         QVERIFY(waitForFuture(
-            pubChannel->declareExchange(exchangeName, qmq::Channel::ExchangeType::Direct)));
-        QVERIFY(waitForFuture(pubChannel->declareQueue(queueName)));
+            pubChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(pubChannel->queueDeclare(queueName)));
 
         auto subChannel = client.createChannel();
 
         QVERIFY(waitForFuture(subChannel->channelOpen()));
-        QVERIFY(waitForFuture(subChannel->bindQueue(queueName, exchangeName)));
+        QVERIFY(waitForFuture(subChannel->queueBind(queueName, exchangeName)));
         //Add consumer
         qmq::Consumer consumer;
         QVERIFY(waitForFuture(consumer.consume(subChannel.get(), queueName)));
@@ -254,7 +254,7 @@ private Q_SLOTS:
             const QByteArray payload = randomBytes(1024);
             msg.setPayload(payload);
 
-            QVERIFY(pubChannel->publish(msg));
+            QVERIFY(pubChannel->basicPublish(msg));
 
             QVERIFY(subMessageSpy.wait(5000));
             qmq::Message deliveredMsg = consumer.dequeueMessage();
@@ -263,7 +263,7 @@ private Q_SLOTS:
                      "application/octet-stream");
             QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(),
                      ceBinary);
-            QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
+            QVERIFY(subChannel->basicAck(deliveredMsg.deliveryTag()));
         }
 
         {
@@ -275,7 +275,7 @@ private Q_SLOTS:
             const QByteArray payload = randomBytes(1024 * 1024);
             msg.setPayload(payload);
 
-            QVERIFY(pubChannel->publish(msg));
+            QVERIFY(pubChannel->basicPublish(msg));
 
             QVERIFY(subMessageSpy.wait(5000));
             qmq::Message deliveredMsg = consumer.dequeueMessage();
@@ -284,10 +284,10 @@ private Q_SLOTS:
                      "application/octet-stream");
             QCOMPARE(deliveredMsg.property(qmq::BasicProperty::ContentEncoding).toString(),
                      ceBinary);
-            QVERIFY(subChannel->ack(deliveredMsg.deliveryTag()));
+            QVERIFY(subChannel->basicAck(deliveredMsg.deliveryTag()));
         }
-        QVERIFY(waitForFuture(pubChannel->closeChannel(200, "OK", 0, 0)));
-        QVERIFY(waitForFuture(subChannel->closeChannel(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(pubChannel->channelClose(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(subChannel->channelClose(200, "OK", 0, 0)));
 
         client.disconnectFromHost();
         QVERIFY(disconnectSpy.wait(smallWaitMs));

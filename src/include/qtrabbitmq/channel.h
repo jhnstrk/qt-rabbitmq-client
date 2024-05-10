@@ -11,15 +11,22 @@
 namespace qmq {
 class Client;
 
-enum class DeclareExchangeOption {
+enum class ExchangeDeclareOption {
     NoOptions = 0x0,
     Passive = 0x1,
     Durable = 0x2,
-    NoWait = 0x3,
+    NoWait = 0x10,
 };
-Q_DECLARE_FLAGS(DeclareExchangeOptions, DeclareExchangeOption)
+Q_DECLARE_FLAGS(ExchangeDeclareOptions, ExchangeDeclareOption)
 
-enum class DeclareQueueOption {
+enum class ExchangeDeleteOption {
+    NoOptions = 0x0,
+    IfUnused = 0x01,
+    NoWait = 0x10,
+};
+Q_DECLARE_FLAGS(ExchangeDeleteOptions, ExchangeDeleteOption)
+
+enum class QueueDeclareOption {
     NoOptions = 0x0,
     Passive = 0x1,
     Durable = 0x2,
@@ -27,7 +34,15 @@ enum class DeclareQueueOption {
     AutoDelete = 0x8,
     NoWait = 0x10,
 };
-Q_DECLARE_FLAGS(DeclareQueueOptions, DeclareQueueOption)
+Q_DECLARE_FLAGS(QueueDeclareOptions, QueueDeclareOption)
+
+enum class QueueDeleteOption {
+    NoOptions = 0x0,
+    IfUnused = 0x01,
+    IfEmpty = 0x02,
+    NoWait = 0x10,
+};
+Q_DECLARE_FLAGS(QueueDeleteOptions, QueueDeleteOption)
 
 enum class PublishOption {
     NoOptions = 0x0,
@@ -41,7 +56,7 @@ enum class ConsumeOption {
     NoLocal = 0x1,
     NoAck = 0x2,
     Exclusive = 0x4,
-    NoWait = 0x8,
+    NoWait = 0x10,
 };
 Q_DECLARE_FLAGS(ConsumeOptions, ConsumeOption)
 
@@ -61,53 +76,73 @@ public:
 
     QFuture<void> channelOpen();
     QFuture<void> channelFlow(bool active);
-    QFuture<void> closeChannel(quint16 code = 200,
+    QFuture<void> channelClose(quint16 code = 200,
                                const QString &replyText = QString(),
                                quint16 classId = 0,
                                quint16 methodId = 0);
 
-    QFuture<void> declareExchange(const QString &exchangeName,
+    // RabbitMQ extension args: alternate-exchange
+    QFuture<void> exchangeDeclare(const QString &exchangeName,
                                   ExchangeType type,
-                                  const DeclareExchangeOptions opts
-                                  = DeclareExchangeOption::NoOptions,
+                                  ExchangeDeclareOptions opts = ExchangeDeclareOption::NoOptions,
                                   const QVariantHash &arguments = QVariantHash());
-    QFuture<void> deleteExchange(const QString &exchangeName);
+    QFuture<void> exchangeDelete(const QString &exchangeName,
+                                 ExchangeDeleteOptions opts = ExchangeDeleteOption::NoOptions);
+    QFuture<void> exchangeBind(const QString &exchangeNameDestination,
+                               const QString &exchangeNameSource,
+                               const QString &routingKey,
+                               bool noWait = false,
+                               const QVariantHash &arguments = QVariantHash());
+    QFuture<void> exchangeUnbind(const QString &exchangeNameDestination,
+                                 const QString &exchangeNameSource,
+                                 const QString &routingKey,
+                                 bool noWait = false,
+                                 const QVariantHash &arguments = QVariantHash());
 
-    QFuture<QVariantList> declareQueue(const QString &queueName,
-                                       const DeclareQueueOptions opts
-                                       = DeclareQueueOption::NoOptions,
+    // RabbitMQ extensions args: x-message-ttl, x-expires
+    QFuture<QVariantList> queueDeclare(const QString &queueName,
+                                       QueueDeclareOptions opts = QueueDeclareOption::NoOptions,
                                        const QVariantHash &arguments = QVariantHash());
-    QFuture<void> bindQueue(const QString &queueName, const QString &exchangeName);
-    QFuture<void> unbindQueue(const QString &queueName, const QString &exchangeName);
+    QFuture<void> queueBind(const QString &queueName,
+                            const QString &exchangeName,
+                            const QString &routingKey = QString(),
+                            bool noWait = false,
+                            const QVariantHash &arguments = QVariantHash());
+    QFuture<void> queueUnbind(const QString &queueName, const QString &exchangeName);
 
     // Returns the message-count
-    QFuture<int> deleteQueue(const QString &queueName);
+    QFuture<int> queueDelete(const QString &queueName,
+                             QueueDeleteOptions opts = QueueDeleteOption::NoOptions);
 
     // Returns the message-count
-    QFuture<int> purgeQueue(const QString &queueName);
+    QFuture<int> queuePurge(const QString &queueName, bool noWait = false);
 
     // Client methods for the "Basic" API.
-    QFuture<void> qos(quint32 prefetchSize, quint16 prefetchCount, bool global);
+    QFuture<void> basicQos(quint32 prefetchSize, quint16 prefetchCount, bool global);
 
-    QFuture<QString> consume(const QString &queueName,
-                             const QString &consumerTag,
-                             ConsumeOptions flags = ConsumeOption::NoOptions);
+    QFuture<QString> basicConsume(const QString &queueName,
+                                  const QString &consumerTag,
+                                  ConsumeOptions flags = ConsumeOption::NoOptions);
     // Returns the consumer tag.
-    QFuture<QString> cancel(const QString &consumerTag, bool noWait = false);
+    QFuture<QString> basicCancel(const QString &consumerTag, bool noWait = false);
     // If the queue isn't empty, return value is { message, messageCount }
     // If the queue is empty, the return is empty.
-    QFuture<QVariantList> get(const QString &queueName, bool noAck);
-    bool publish(const qmq::Message &message, PublishOptions opts = PublishOption::NoOptions);
-    bool publish(const QString &payload,
-                 const QString &exchangeName,
-                 const QString &routingKey = QString(),
-                 const BasicPropertyHash &properties = BasicPropertyHash(),
-                 PublishOptions opts = PublishOption::NoOptions);
+    QFuture<QVariantList> basicGet(const QString &queueName, bool noAck);
+    bool basicPublish(const qmq::Message &message, PublishOptions opts = PublishOption::NoOptions);
+    bool basicPublish(const QString &payload,
+                      const QString &exchangeName,
+                      const QString &routingKey = QString(),
+                      const BasicPropertyHash &properties = BasicPropertyHash(),
+                      PublishOptions opts = PublishOption::NoOptions);
 
-    bool recoverAsync(bool requeue);
-    QFuture<void> recover(bool requeue);
-    bool ack(quint64 deliveryTag, bool muliple = false);
-    bool reject(quint64 deliveryTag, bool requeue);
+    bool basicRecoverAsync(bool requeue);
+    QFuture<void> basicRecover(bool requeue);
+    bool basicAck(quint64 deliveryTag, bool muliple = false);
+    // Rabbit extension
+    bool basicNack(quint64 deliveryTag, bool muliple = false, bool requeue = false);
+    bool basicReject(quint64 deliveryTag, bool requeue);
+
+    QFuture<void> confirmSelect(bool noWait);
 
     QFuture<void> txSelect();
     QFuture<void> txRollback();
@@ -129,6 +164,8 @@ protected:
 
     bool onExchangeDeclareOk(const MethodFrame *frame);
     bool onExchangeDeleteOk(const MethodFrame *frame);
+    bool onExchangeBindOk(const MethodFrame *frame);
+    bool onExchangeUnbindOk(const MethodFrame *frame);
 
     bool onQueueDeclareOk(const MethodFrame *frame);
     bool onQueueBindOk(const MethodFrame *frame);
@@ -144,6 +181,8 @@ protected:
     bool onBasicGetOk(const MethodFrame *frame);
     bool onBasicGetEmpty(const MethodFrame *frame);
     bool onBasicRecoverOk(const MethodFrame *frame);
+
+    bool onConfirmSelectOk(const MethodFrame *frame);
 
     bool onTxSelectOk(const MethodFrame *frame);
     bool onTxCommitOk(const MethodFrame *frame);
