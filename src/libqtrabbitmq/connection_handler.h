@@ -27,6 +27,9 @@ public:
     quint16 maxChannelId() const { return m_channelMax; }
     quint16 heartbeatSeconds() const { return m_heartbeatSeconds; }
     void setTuneParameters(quint16 channelMax, quint32 maxFrameSizeBytes, quint16 heartbeatSeconds);
+
+    // Any valid traffic from the server counts as a heartbeat.
+    void resetTrafficFromServerHeartbeat();
 Q_SIGNALS:
     void connectionOpened();
     void connectionClosed(quint16 code, const QString &replyText, quint16 classId, quint16 methodId);

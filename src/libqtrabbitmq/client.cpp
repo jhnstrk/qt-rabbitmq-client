@@ -224,6 +224,9 @@ void Client::onSocketReadyRead()
         break;
     }
 
+    // Any activity should reset the heartbeat timeout.
+    d->connection->resetTrafficFromServerHeartbeat();
+
     if (d->socket->bytesAvailable() > 0) {
         qDebug() << "More data to come";
         // Allow event loop to do some work if needed.

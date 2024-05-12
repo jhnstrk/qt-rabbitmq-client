@@ -12,11 +12,9 @@ A client library for Rabbit-MQ for Qt applications.
 
 - Improve tune.
 - Pluggable authentication.
-- When a connection is established, store connection parameters (max frame size, channel max) in client.
-  - Enforce channel max. (Rabbit gives me 2047)
+  - Test channel max. (Rabbit gives me 2047)
   - Enforce max frame size and test it (Rabbit gives 131072)
   - Enforce MAX_MESSAGE_SIZE
-  - Check heartbeat is working.
 - Handle closed channels (internal state)
 - Make flow messages actually stop / start flow.
 - Load tests.

@@ -46,7 +46,6 @@ bool ConnectionHandler::handleMethodFrame(const MethodFrame *frame)
 bool ConnectionHandler::handleHeartbeatFrame(const HeartbeatFrame *)
 {
     qDebug() << "Received heartbeat";
-    this->m_lastheartbeatReceived = QDateTime::currentDateTimeUtc();
     return true;
 }
 
@@ -257,5 +256,9 @@ void ConnectionHandler::onHeartbeatTimer()
     this->m_client->sendHeartbeat();
 }
 
+void ConnectionHandler::resetTrafficFromServerHeartbeat()
+{
+    this->m_lastheartbeatReceived = QDateTime::currentDateTimeUtc();
+}
 } // namespace detail
 } // namespace qmq
