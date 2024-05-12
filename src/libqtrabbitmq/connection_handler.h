@@ -2,6 +2,7 @@
 
 #include "qtrabbitmq/abstract_frame_handler.h"
 
+#include <QDateTime>
 #include <QObject>
 #include <QTimer>
 #include <qglobal.h>
@@ -18,7 +19,7 @@ public:
     bool handleMethodFrame(const MethodFrame *frame) override;
     bool handleHeaderFrame(const HeaderFrame *) override { return false; }
     bool handleBodyFrame(const BodyFrame *) override { return false; }
-    bool handleHeartbeatFrame(const HeartbeatFrame *) override { return false; }
+    bool handleHeartbeatFrame(const HeartbeatFrame *) override;
 
     bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
@@ -52,6 +53,7 @@ private:
     quint16 m_channelMax = 2047;
     quint32 m_maxFrameSizeBytes = 131072;
     quint16 m_heartbeatSeconds = 60;
+    QDateTime m_lastheartbeatReceived;
     struct CloseArgs
     {
         quint16 code = 0;

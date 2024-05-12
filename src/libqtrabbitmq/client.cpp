@@ -95,9 +95,19 @@ quint16 Client::maxChannelId() const
     return d->connection->maxChannelId();
 }
 
+void Client::setMaxChannelId(quint16 mx)
+{
+    d->maxChannelId = mx;
+}
+
 quint16 Client::heartbeatSeconds() const
 {
     return d->connection->heartbeatSeconds();
+}
+
+void Client::setHeartbeatSeconds(quint16 n)
+{
+    d->heartbeatSeconds = n;
 }
 
 bool Client::connectToHost(const QUrl &url)

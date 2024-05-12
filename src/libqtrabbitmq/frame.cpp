@@ -906,11 +906,21 @@ bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
         qWarning() << "Cannot write frame: too large.";
         return false;
     }
-    bool isOk = writeAmqp<quint8>(io, t);
-    isOk = isOk && writeAmqp<quint16>(io, channel);
-    isOk = isOk && writeAmqp<quint32>(io, size);
-    isOk = isOk && (io->write(content) == content.size());
-    isOk = isOk && writeAmqp<quint8>(io, FrameEndChar);
+
+    // Create a temporary store so that the frame is written in a single TCP write operation.
+    QByteArray iobuffer;
+    iobuffer.reserve(size + 8);
+    QBuffer buf(&iobuffer);
+    buf.open(QIODevice::WriteOnly);
+
+    bool isOk = writeAmqp<quint8>(&buf, t);
+    isOk = isOk && writeAmqp<quint16>(&buf, channel);
+    isOk = isOk && writeAmqp<quint32>(&buf, size);
+    isOk = isOk && (buf.write(content) == content.size());
+    isOk = isOk && writeAmqp<quint8>(&buf, FrameEndChar);
+
+    // Actually send the packet.
+    isOk = isOk && (io->write(iobuffer) == iobuffer.size());
     qDebug() << "Written frame" << (isOk ? "OK" : "FAILED") << "with size" << size;
     return isOk;
 }

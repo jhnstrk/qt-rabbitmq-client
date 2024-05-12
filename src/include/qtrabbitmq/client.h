@@ -34,8 +34,10 @@ public:
     void setMaxFrameSizeBytes(quint32 value);
 
     quint16 maxChannelId() const;
+    void setMaxChannelId(quint16 mx);
 
     quint16 heartbeatSeconds() const;
+    void setHeartbeatSeconds(quint16 n);
 
 Q_SIGNALS:
     void connected();

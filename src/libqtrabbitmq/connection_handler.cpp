@@ -43,6 +43,13 @@ bool ConnectionHandler::handleMethodFrame(const MethodFrame *frame)
     return false;
 }
 
+bool ConnectionHandler::handleHeartbeatFrame(const HeartbeatFrame *)
+{
+    qDebug() << "Received heartbeat";
+    this->m_lastheartbeatReceived = QDateTime::currentDateTimeUtc();
+    return true;
+}
+
 bool ConnectionHandler::onStart(const MethodFrame *frame)
 {
     bool isOk = false;
@@ -207,12 +214,14 @@ bool ConnectionHandler::onCloseOk(const MethodFrame *frame)
 
 bool ConnectionHandler::startHeartbeat()
 {
+    this->m_lastheartbeatReceived = QDateTime::currentDateTimeUtc();
     if (this->m_heartbeatSeconds <= 0) {
         return true;
     }
-    if (!this->m_heartbeatTimer) {
+    if (this->m_heartbeatTimer == nullptr) {
         this->m_heartbeatTimer = new QTimer(this);
-        this->m_heartbeatTimer->setInterval(int(this->m_heartbeatSeconds) * 1000);
+        // To help avoid timeouts, we send heartbeats at twice the min.
+        this->m_heartbeatTimer->setInterval(int(this->m_heartbeatSeconds) * (1000 / 2));
         connect(this->m_heartbeatTimer,
                 &QTimer::timeout,
                 this,
@@ -232,6 +241,14 @@ void ConnectionHandler::stopHeartbeat()
 
 void ConnectionHandler::onHeartbeatTimer()
 {
+    const QDateTime nowUtc = QDateTime::currentDateTimeUtc();
+    // This follows RabbitMq - "After two missed heartbeats, the peer is considered to be unreachable."
+    if (this->m_lastheartbeatReceived.secsTo(nowUtc) > (this->m_heartbeatSeconds * 2)) {
+        qWarning() << "Missed heartbeats from server: last receieved at"
+                   << this->m_lastheartbeatReceived << "now:" << nowUtc
+                   << "heartbeat:" << this->m_heartbeatSeconds << "s";
+        this->m_client->disconnectFromHost(500, "Missed heartbeats");
+    }
     this->m_client->sendHeartbeat();
 }
 

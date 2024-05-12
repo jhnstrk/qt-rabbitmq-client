@@ -9,16 +9,16 @@
 namespace {
 constexpr const quint64 MAX_MESSAGE_SIZE = 10 * 1024 * 1024;
 
-QDebug operator<<(QDebug debug, const QHash<qmq::BasicProperty, QVariant> &h)
+QDebug operator<<(QDebug debug, const QHash<qmq::BasicProperty, QVariant> &propHash)
 {
-    for (auto it(h.constBegin()); it != h.constEnd(); ++it) {
+    for (auto it(propHash.constBegin()); it != propHash.constEnd(); ++it) {
         debug = (debug << qmq::basicPropertyName(it.key()) << it.value());
     }
     return debug;
 }
-QString exchangeTypeToString(qmq::Channel::ExchangeType t)
+QString exchangeTypeToString(qmq::Channel::ExchangeType exchType)
 {
-    switch (t) {
+    switch (exchType) {
     case qmq::Channel::ExchangeType::Fanout:
         return "fanout";
     case qmq::Channel::ExchangeType::Direct:
@@ -28,7 +28,7 @@ QString exchangeTypeToString(qmq::Channel::ExchangeType t)
     case qmq::Channel::ExchangeType::Topic:
         return "topic";
     default:
-        qWarning() << "Unknown exchange type" << (int) t;
+        qWarning() << "Unknown exchange type" << (int) exchType;
         return {};
     }
 }
@@ -261,16 +261,16 @@ bool Channel::handleBodyFrame(const BodyFrame *frame)
     return true;
 }
 
-bool Channel::addConsumer(Consumer *c)
+bool Channel::addConsumer(Consumer *consumer)
 {
-    const QString consumerTag = c->consumerTag();
+    const QString consumerTag = consumer->consumerTag();
 
     if (d->consumers.contains(consumerTag)) {
         qWarning() << "Denying attempt to add duplicate consumer";
         return false;
     }
 
-    d->consumers.insert(consumerTag, QPointer<qmq::Consumer>(c));
+    d->consumers.insert(consumerTag, QPointer<qmq::Consumer>(consumer));
     return true;
 }
 
