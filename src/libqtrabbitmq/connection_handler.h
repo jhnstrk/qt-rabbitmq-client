@@ -21,7 +21,7 @@ public:
     bool handleBodyFrame(const BodyFrame *) override { return false; }
     bool handleHeartbeatFrame(const HeartbeatFrame *) override;
 
-    bool sendClose(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
+    bool sendClose(quint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
     quint32 maxFrameSizeBytes() const { return m_maxFrameSizeBytes; }
     quint16 maxChannelId() const { return m_channelMax; }
@@ -29,7 +29,7 @@ public:
     void setTuneParameters(quint16 channelMax, quint32 maxFrameSizeBytes, quint16 heartbeatSeconds);
 Q_SIGNALS:
     void connectionOpened();
-    void connectionClosed(qint16 code, const QString &replyText, quint16 classId, quint16 methodId);
+    void connectionClosed(quint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
 protected:
     bool sendStartOk();

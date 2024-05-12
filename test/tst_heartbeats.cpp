@@ -36,6 +36,9 @@ private Q_SLOTS:
 
     void testConnect()
     {
+        // Connect, using a 3-second heartbeat, and wait for 10 seconds.
+        // If the client doesn't send heartbeats, Rabbit will close the connection
+        // since this is more than the 2-heartbeat tolerance.
         qmq::Client client;
         client.setHeartbeatSeconds(3);
 

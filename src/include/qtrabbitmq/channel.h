@@ -108,7 +108,10 @@ public:
                             const QString &routingKey = QString(),
                             bool noWait = false,
                             const QVariantHash &arguments = QVariantHash());
-    QFuture<void> queueUnbind(const QString &queueName, const QString &exchangeName);
+    QFuture<void> queueUnbind(const QString &queueName,
+                              const QString &exchangeName,
+                              const QString &routingKey = QString(),
+                              const QVariantHash &arguments = QVariantHash());
 
     // Returns the message-count
     QFuture<int> queueDelete(const QString &queueName,

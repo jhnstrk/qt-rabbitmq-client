@@ -123,7 +123,9 @@ bool ConnectionHandler::onTune(const MethodFrame *frame)
 
 bool ConnectionHandler::sendTuneOk()
 {
-    QVariantList args({this->m_channelMax, this->m_maxFrameSizeBytes, this->m_heartbeatSeconds});
+    const QVariantList args({QVariant::fromValue(this->m_channelMax),
+                             this->m_maxFrameSizeBytes,
+                             QVariant::fromValue(this->m_heartbeatSeconds)});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::TuneOk);
     qDebug() << "Set TuneOk method frame args" << args;
     frame.setArguments(args);
@@ -182,7 +184,7 @@ bool ConnectionHandler::sendCloseOk()
     return isOk;
 }
 
-bool ConnectionHandler::sendClose(qint16 code,
+bool ConnectionHandler::sendClose(quint16 code,
                                   const QString &replyText,
                                   quint16 classId,
                                   quint16 methodId)
@@ -193,7 +195,10 @@ bool ConnectionHandler::sendClose(qint16 code,
     m_closeReason.methodId = methodId;
     m_closeReason.isServerInitiated = false;
 
-    QVariantList args({code, replyText, classId, methodId});
+    const QVariantList args({QVariant::fromValue(code),
+                             replyText,
+                             QVariant::fromValue(classId),
+                             QVariant::fromValue(methodId)});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::Close);
     qDebug() << "Set connection.close frame args" << args;
     frame.setArguments(args);
