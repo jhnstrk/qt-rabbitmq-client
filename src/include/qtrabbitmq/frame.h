@@ -47,7 +47,7 @@ public:
 
     //! maxFrameSize of 0 is treated as unlimited.
     static std::unique_ptr<Frame> readFrame(QIODevice *io, quint32 maxFrameSize, ErrorCode *err);
-    static bool writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f);
+    static bool writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame &f);
 
     //! Note that bit type isn't handled here.
     static qmq::FieldValue metatypeToFieldValue(int typeId);

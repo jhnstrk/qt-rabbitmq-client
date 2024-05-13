@@ -44,7 +44,7 @@ Q_SIGNALS:
     void disconnected();
 
 public Q_SLOTS:
-    bool sendFrame(const Frame *f);
+    bool sendFrame(const Frame &f);
     bool sendHeartbeat();
 
     void disconnectFromHost(quint16 code = 200,

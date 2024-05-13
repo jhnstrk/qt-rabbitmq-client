@@ -16,10 +16,10 @@ class ConnectionHandler : public QObject, public AbstractFrameHandler
     Q_OBJECT
 public:
     ConnectionHandler(Client *client);
-    bool handleMethodFrame(const MethodFrame *frame) override;
-    bool handleHeaderFrame(const HeaderFrame *) override { return false; }
-    bool handleBodyFrame(const BodyFrame *) override { return false; }
-    bool handleHeartbeatFrame(const HeartbeatFrame *) override;
+    bool handleMethodFrame(const MethodFrame &frame) override;
+    bool handleHeaderFrame(const HeaderFrame &) override { return false; }
+    bool handleBodyFrame(const BodyFrame &) override { return false; }
+    bool handleHeartbeatFrame(const HeartbeatFrame &) override;
 
     bool sendClose(quint16 code, const QString &replyText, quint16 classId, quint16 methodId);
 
@@ -39,17 +39,17 @@ protected:
     bool sendTuneOk();
 
     bool sendOpen();
-    bool onOpenOk(const MethodFrame *frame);
-    bool onClose(const MethodFrame *frame);
+    bool onOpenOk(const MethodFrame &frame);
+    bool onClose(const MethodFrame &frame);
     bool sendCloseOk();
     bool startHeartbeat();
     void stopHeartbeat();
     void onHeartbeatTimer();
 
 private:
-    bool onStart(const MethodFrame *frame);
-    bool onTune(const MethodFrame *frame);
-    bool onCloseOk(const MethodFrame *frame);
+    bool onStart(const MethodFrame &frame);
+    bool onTune(const MethodFrame &frame);
+    bool onCloseOk(const MethodFrame &frame);
 
     Client *m_client = nullptr;
     QTimer *m_heartbeatTimer = nullptr;

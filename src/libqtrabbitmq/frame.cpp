@@ -893,13 +893,13 @@ std::unique_ptr<qmq::Frame> qmq::Frame::readFrame(QIODevice *io,
     }
 }
 
-bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame *f)
+bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame &f)
 {
-    qDebug() << "Writing frame to channel" << f->channel() << "with type=" << (int) f->type();
-    const QByteArray content = f->content();
+    qDebug() << "Writing frame to channel" << f.channel() << "with type=" << (int) f.type();
+    const QByteArray content = f.content();
 
-    const quint8 t = static_cast<quint8>(f->type());
-    const quint16 channel = f->channel();
+    const quint8 t = static_cast<quint8>(f.type());
+    const quint16 channel = f.channel();
     const quint32 size = content.size();
 
     if (maxFrameSize != 0 && (content.size() + FrameHeaderSize + 1) > maxFrameSize) {

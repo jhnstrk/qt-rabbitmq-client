@@ -151,45 +151,45 @@ public:
     QFuture<void> txRollback();
     QFuture<void> txCommit();
 
-    bool handleMethodFrame(const MethodFrame *frame) override;
-    bool handleHeaderFrame(const HeaderFrame *frame) override;
-    bool handleBodyFrame(const BodyFrame *frame) override;
-    bool handleHeartbeatFrame(const HeartbeatFrame *) override { return false; }
+    bool handleMethodFrame(const MethodFrame &frame) override;
+    bool handleHeaderFrame(const HeaderFrame &frame) override;
+    bool handleBodyFrame(const BodyFrame &frame) override;
+    bool handleHeartbeatFrame(const HeartbeatFrame &) override { return false; }
 
 protected:
-    bool onChannelOpenOk(const MethodFrame *frame);
-    bool onChannelFlow(const MethodFrame *frame);
+    bool onChannelOpenOk(const MethodFrame &frame);
+    bool onChannelFlow(const MethodFrame &frame);
     bool channelFlowOk(bool active);
-    bool onChannelFlowOk(const MethodFrame *frame);
-    bool onChannelClose(const MethodFrame *frame);
-    bool onChannelCloseOk(const MethodFrame *frame);
+    bool onChannelFlowOk(const MethodFrame &frame);
+    bool onChannelClose(const MethodFrame &frame);
+    bool onChannelCloseOk(const MethodFrame &frame);
     bool channelCloseOk();
 
-    bool onExchangeDeclareOk(const MethodFrame *frame);
-    bool onExchangeDeleteOk(const MethodFrame *frame);
-    bool onExchangeBindOk(const MethodFrame *frame);
-    bool onExchangeUnbindOk(const MethodFrame *frame);
+    bool onExchangeDeclareOk(const MethodFrame &frame);
+    bool onExchangeDeleteOk(const MethodFrame &frame);
+    bool onExchangeBindOk(const MethodFrame &frame);
+    bool onExchangeUnbindOk(const MethodFrame &frame);
 
-    bool onQueueDeclareOk(const MethodFrame *frame);
-    bool onQueueBindOk(const MethodFrame *frame);
-    bool onQueueUnbindOk(const MethodFrame *frame);
-    bool onQueueDeleteOk(const MethodFrame *frame);
-    bool onQueuePurgeOk(const MethodFrame *frame);
+    bool onQueueDeclareOk(const MethodFrame &frame);
+    bool onQueueBindOk(const MethodFrame &frame);
+    bool onQueueUnbindOk(const MethodFrame &frame);
+    bool onQueueDeleteOk(const MethodFrame &frame);
+    bool onQueuePurgeOk(const MethodFrame &frame);
 
-    bool onBasicQosOk(const MethodFrame *frame);
-    bool onBasicConsumeOk(const MethodFrame *frame);
-    bool onBasicDeliver(const MethodFrame *frame);
-    bool onBasicCancelOk(const MethodFrame *frame);
-    bool onBasicReturn(const MethodFrame *frame);
-    bool onBasicGetOk(const MethodFrame *frame);
-    bool onBasicGetEmpty(const MethodFrame *frame);
-    bool onBasicRecoverOk(const MethodFrame *frame);
+    bool onBasicQosOk(const MethodFrame &frame);
+    bool onBasicConsumeOk(const MethodFrame &frame);
+    bool onBasicDeliver(const MethodFrame &frame);
+    bool onBasicCancelOk(const MethodFrame &frame);
+    bool onBasicReturn(const MethodFrame &frame);
+    bool onBasicGetOk(const MethodFrame &frame);
+    bool onBasicGetEmpty(const MethodFrame &frame);
+    bool onBasicRecoverOk(const MethodFrame &frame);
 
-    bool onConfirmSelectOk(const MethodFrame *frame);
+    bool onConfirmSelectOk(const MethodFrame &frame);
 
-    bool onTxSelectOk(const MethodFrame *frame);
-    bool onTxCommitOk(const MethodFrame *frame);
-    bool onTxRollbackOk(const MethodFrame *frame);
+    bool onTxSelectOk(const MethodFrame &frame);
+    bool onTxCommitOk(const MethodFrame &frame);
+    bool onTxRollbackOk(const MethodFrame &frame);
 
     void incomingMessageComplete();
 public Q_SLOTS:

@@ -165,7 +165,7 @@ QString Client::virtualHost() const
     return d->vhost;
 }
 
-bool Client::sendFrame(const Frame *frame)
+bool Client::sendFrame(const Frame &frame)
 {
     const quint32 maxFrameSize = this->maxFrameSizeBytes();
     return Frame::writeFrame(d->socket, maxFrameSize, frame);
@@ -204,20 +204,20 @@ void Client::onSocketReadyRead()
     switch (frame->type()) {
     case FrameType::Method: {
         qDebug() << "Method frame on channel" << frame->channel();
-        const MethodFrame *methodFr = static_cast<MethodFrame *>(frame.get());
+        const MethodFrame &methodFr = static_cast<const MethodFrame &>(*frame.get());
         isHandled = handler->handleMethodFrame(methodFr);
     } break;
     case FrameType::Header:
         qDebug() << "Header frame on channel" << frame->channel();
-        isHandled = handler->handleHeaderFrame(static_cast<HeaderFrame *>(frame.get()));
+        isHandled = handler->handleHeaderFrame(static_cast<const HeaderFrame &>(*frame.get()));
         break;
     case FrameType::Body:
         qDebug() << "Body frame on channel" << frame->channel();
-        isHandled = handler->handleBodyFrame(static_cast<BodyFrame *>(frame.get()));
+        isHandled = handler->handleBodyFrame(static_cast<const BodyFrame &>(*frame.get()));
         break;
     case FrameType::Heartbeat:
         qDebug() << "Heartbeat frame on channel" << frame->channel();
-        isHandled = handler->handleHeartbeatFrame(static_cast<HeartbeatFrame *>(frame.get()));
+        isHandled = handler->handleHeartbeatFrame(static_cast<const HeartbeatFrame &>(*frame.get()));
         break;
     default:
         qWarning() << "Unknown frame type" << (int) frame->type();
@@ -277,7 +277,7 @@ void Client::onSocketSslErrors(const QList<QSslError> &errors)
 bool Client::sendHeartbeat()
 {
     qmq::HeartbeatFrame frame;
-    return this->sendFrame(&frame);
+    return this->sendFrame(frame);
 }
 
 void Client::onSocketStateChanged(QAbstractSocket::SocketState state)
