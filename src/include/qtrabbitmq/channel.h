@@ -192,6 +192,8 @@ protected:
     bool onTxRollbackOk(const MethodFrame &frame);
 
     void incomingMessageComplete();
+
+    void emptyMessageTracking(int code, const QString &message);
 public Q_SLOTS:
 
 protected Q_SLOTS:

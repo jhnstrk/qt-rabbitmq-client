@@ -266,7 +266,7 @@ bool Channel::addConsumer(Consumer *consumer)
     const QString consumerTag = consumer->consumerTag();
 
     if (d->consumers.contains(consumerTag)) {
-        qWarning() << "Denying attempt to add duplicate consumer";
+        qWarning() << "Denying attempt to add duplicate consumer with tag" << consumerTag;
         return false;
     }
 
@@ -389,6 +389,7 @@ bool Channel::onChannelCloseOk(const MethodFrame &frame)
     if (messageTracker) {
         messageTracker->finish();
     }
+    this->emptyMessageTracking(500, "Channel closed");
     return true;
 }
 
@@ -410,11 +411,12 @@ bool Channel::channelCloseOk()
 {
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::CloseOk);
     qDebug() << "Set channel.closeOk frame args";
-    if (!d->client->sendFrame(frame)) {
+    const bool isOk = d->client->sendFrame(frame);
+    if (!isOk) {
         qWarning() << "Unable to send CloseOK";
-        return false;
     }
-    return true;
+    this->emptyMessageTracking(500, "Channel closed by server");
+    return isOk;
 }
 
 // ----------------------------------------------------------------------------
@@ -1384,6 +1386,19 @@ void Channel::incomingMessageComplete()
         consumerIt.value()->pushMessage(msg);
     }
 }
+
+void Channel::emptyMessageTracking(int code, const QString &message)
+{
+    if (!d->inFlightMessages.isEmpty()) {
+        qWarning() << "Channel closed with" << d->inFlightMessages.size() << "messages pending";
+    }
+    while (!d->inFlightMessages.isEmpty()) {
+        MessageItemPtr it = d->inFlightMessages.takeFirst();
+        it->setException(qmq::Exception(code, message));
+        it->finish();
+    }
+}
+
 } // namespace qmq
 
 #include <channel.moc>
