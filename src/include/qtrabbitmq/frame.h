@@ -79,15 +79,10 @@ public:
     QVariantList getArguments(bool *ok = nullptr) const;
     bool setArguments(const QVariantList &values);
 
-    MethodFrame(quint16 channel, quint16 classId, quint16 methodId)
-        : Frame(qmq::FrameType::Method, channel)
-        , m_classId(classId)
-        , m_methodId(methodId)
-        , m_arguments()
-    {}
-
-protected:
-    MethodFrame(quint16 channel, quint16 classId, quint16 methodId, const QByteArray &arguments)
+    MethodFrame(quint16 channel,
+                quint16 classId,
+                quint16 methodId,
+                const QByteArray &arguments = QByteArray())
         : Frame(qmq::FrameType::Method, channel)
         , m_classId(classId)
         , m_methodId(methodId)

@@ -293,6 +293,75 @@ private Q_SLOTS:
         QVERIFY(disconnectSpy.wait(smallWaitMs));
     }
 
+    // Using the "Get" basic API.
+    void testPubGetTwoClients()
+    {
+        qmq::Client pubClient;
+        QSignalSpy pubConnectSpy(&pubClient, &qmq::Client::connected);
+        QSignalSpy pubDisconnectSpy(&pubClient, &qmq::Client::disconnected);
+        pubClient.connectToHost(testUrl);
+        QVERIFY(pubConnectSpy.wait(smallWaitMs));
+        auto pubChannel = pubClient.createChannel();
+
+        QVERIFY(waitForFuture(pubChannel->channelOpen()));
+
+        const QString exchangeName = "my-messages";
+        const QString queueName = "my-queue";
+        QVERIFY(waitForFuture(
+            pubChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(pubChannel->queueDeclare(queueName)));
+
+        qmq::Client subClient;
+        QSignalSpy subConnectSpy(&subClient, &qmq::Client::connected);
+        QSignalSpy subDisconnectSpy(&subClient, &qmq::Client::disconnected);
+        subClient.connectToHost(testUrl);
+        QVERIFY(subConnectSpy.wait(smallWaitMs));
+        auto subChannel = subClient.createChannel();
+
+        QVERIFY(waitForFuture(subChannel->channelOpen()));
+        QVERIFY(waitForFuture(
+            subChannel->exchangeDeclare(exchangeName, qmq::Channel::ExchangeType::Direct)));
+        QVERIFY(waitForFuture(subChannel->queueDeclare(queueName)));
+        QVERIFY(waitForFuture(subChannel->queueBind(queueName, exchangeName)));
+
+        // At this point nothing is published. Get should return empty.
+        QFuture<QVariantList> result = subChannel->basicGet(queueName);
+        QVERIFY(waitForFuture(result));
+        QCOMPARE(result.resultCount(), 0);
+
+        const QString payload = testMessage();
+        QVERIFY(pubChannel->basicPublish(payload, exchangeName));
+
+        QVERIFY(QTest::qWaitFor(
+            [&]() -> bool {
+                result = subChannel->basicGet(queueName);
+                return waitForFuture(result) && (result.resultCount() > 0);
+            },
+            smallWaitMs));
+
+        QCOMPARE(result.resultCount(), 1);
+
+        const QVariantList resultList = result.resultAt(0);
+        QCOMPARE(resultList.size(), 2);
+        QCOMPARE(resultList.at(1).toInt(), 0);
+
+        const qmq::Message deliveredMsg = resultList.at(0).value<qmq::Message>();
+
+        QCOMPARE(deliveredMsg.payload(), payload);
+        QVERIFY(subChannel->basicAck(deliveredMsg.deliveryTag()));
+
+        QVERIFY(waitForFuture(pubChannel->channelClose(200, "OK", 0, 0)));
+        QVERIFY(waitForFuture(subChannel->channelClose(200, "OK", 0, 0)));
+
+        qDebug() << "pubClient . disconnectFromHost..";
+        pubClient.disconnectFromHost();
+        qDebug() << "subClient . disconnectFromHost..";
+        QVERIFY(pubDisconnectSpy.wait(smallWaitMs));
+        subClient.disconnectFromHost();
+        qDebug() << "waiting";
+        QVERIFY(subDisconnectSpy.wait(smallWaitMs));
+    }
+
     void cleanupTestCase()
     {
         //qDebug() << "Called after every test";

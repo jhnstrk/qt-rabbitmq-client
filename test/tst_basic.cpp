@@ -1,4 +1,5 @@
 #include <qtrabbitmq/decimal.h>
+#include <qtrabbitmq/message.h>
 #include <qtrabbitmq/qtrabbitmq.h>
 
 #include <QDebug>
@@ -16,6 +17,7 @@ private slots:
     {
         // qDebug("Called before everything else.");
         qRegisterMetaType<qmq::Decimal>();
+        qRegisterMetaType<qmq::Message>();
     }
 
     void testDecimalVariant()
@@ -60,6 +62,31 @@ private slots:
         const QFETCH(QString, strValue);
 
         QCOMPARE(value.toString(), strValue);
+    }
+
+    void testMessageVariant()
+    {
+        const QByteArray payload("ljshlkjlasjbdflkjabsdflkjbsdfkj");
+        const QString exchangeName("AnExchange");
+        const QString routingKey("foo");
+        const qmq::BasicPropertyHash properties({{qmq::BasicProperty::ContentType, "text/plain"}});
+
+        const qmq::Message m1 = qmq::Message(payload, exchangeName, routingKey, properties);
+        const qmq::Message m2 = qmq::Message(payload, exchangeName, routingKey, properties);
+
+        QCOMPARE(m1, m2);
+
+        const QVariant v1 = QVariant::fromValue(m1);
+        const QVariant v2 = QVariant::fromValue(m2);
+        QCOMPARE(v1, v2);
+
+        const qmq::Message mv1 = v1.value<qmq::Message>();
+        const qmq::Message mv2 = v2.value<qmq::Message>();
+        QCOMPARE(mv1, m1);
+        QCOMPARE(mv2, m2);
+
+        // Test debug operator too.
+        qDebug() << "Message" << m1;
     }
     void cleanupTestCase()
     {

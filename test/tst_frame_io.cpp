@@ -61,7 +61,7 @@ private slots:
         QVERIFY(buffer.open(QBuffer::ReadWrite));
 
         QVERIFY(qmq::Frame::writeFieldValue(&buffer, value));
-        bool ok;
+        bool ok = false;
         buffer.seek(0);
         const QVariant actual = qmq::Frame::readFieldValue(&buffer, &ok);
         QCOMPARE(actual.typeId(), value.typeId());
@@ -77,7 +77,7 @@ private slots:
         QVERIFY(buffer.open(QBuffer::ReadWrite));
         const qmq::FieldValue type = qmq::Frame::metatypeToFieldValue(value.typeId());
         QVERIFY(qmq::Frame::writeNativeFieldValues(&buffer, {value}, {type}));
-        bool ok;
+        bool ok = false;
         buffer.seek(0);
         const QVariantList actual = qmq::Frame::readNativeFieldValues(&buffer, {type}, &ok);
 
@@ -120,7 +120,7 @@ private slots:
         QBuffer buffer;
         QVERIFY(buffer.open(QBuffer::ReadWrite));
         QVERIFY(qmq::Frame::writeNativeFieldValues(&buffer, values, types));
-        bool ok;
+        bool ok = false;
         buffer.seek(0);
         const QVariantList actual = qmq::Frame::readNativeFieldValues(&buffer, types, &ok);
 

@@ -74,6 +74,7 @@ public:
 
     bool addConsumer(Consumer *c);
 
+    // TODO enum class ChannelState { Closed, Opening, Open, Closing };
     QFuture<void> channelOpen();
     QFuture<void> channelFlow(bool active);
     QFuture<void> channelClose(quint16 code = 200,
@@ -129,8 +130,8 @@ public:
     // Returns the consumer tag.
     QFuture<QString> basicCancel(const QString &consumerTag, bool noWait = false);
     // If the queue isn't empty, return value is { message, messageCount }
-    // If the queue is empty, the return is empty.
-    QFuture<QVariantList> basicGet(const QString &queueName, bool noAck);
+    // If the queue is empty, the return is a future with no result (i.e. empty).
+    QFuture<QVariantList> basicGet(const QString &queueName, bool noAck = false);
     bool basicPublish(const qmq::Message &message, PublishOptions opts = PublishOption::NoOptions);
     bool basicPublish(const QString &payload,
                       const QString &exchangeName,

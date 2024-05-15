@@ -69,6 +69,8 @@ private:
 };
 
 } // namespace qmq
-// QDebug operator<<(QDebug debug, const qmq::Message &message);
+
+QDebug operator<<(QDebug debug, const qmq::Message &message);
+bool operator==(const qmq::Message &lhs, const qmq::Message &rhs);
 
 Q_DECLARE_METATYPE(qmq::Message);

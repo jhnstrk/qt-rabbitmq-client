@@ -9,6 +9,7 @@
 #include <QVariant>
 #include <QtEndian>
 
+#include <array>
 namespace {
 bool verifyTypeCompat(const qmq::FieldValue type, const QMetaType &metatype)
 {
@@ -63,8 +64,8 @@ template<typename T>
 T readAmqp(QIODevice *io, bool *ok)
 {
     const int N = sizeof(T);
-    char buffer[N];
-    if (io->read(buffer, N) != N) {
+    std::array<char, N> buffer;
+    if (io->read(buffer.data(), N) != N) {
         qCritical() << "Error reading value";
         if (ok != nullptr)
             *ok = false;
@@ -73,7 +74,7 @@ T readAmqp(QIODevice *io, bool *ok)
     if (ok != nullptr) {
         *ok = true;
     }
-    return qFromBigEndian<T>(static_cast<char *>(buffer));
+    return qFromBigEndian<T>(buffer.data());
 }
 
 template<typename T>
@@ -97,9 +98,9 @@ template<typename T>
 bool writeAmqp(QIODevice *io, T value)
 {
     const int N = sizeof(T);
-    char buffer[N];
-    qToBigEndian<T>(value, static_cast<char *>(buffer));
-    if (io->write(static_cast<char *>(buffer), N) != N) {
+    std::array<char, N> buffer;
+    qToBigEndian<T>(value, buffer.data());
+    if (io->write(buffer.data(), N) != N) {
         qCritical() << "Error writing value";
         return false;
     };
@@ -118,8 +119,8 @@ bool writeAmqpVariant(QIODevice *io, const QVariant &value)
 
 bool readAmqpBool(QIODevice *io, bool *ok)
 {
-    char buffer[1];
-    if (io->read(buffer, 1) != 1) {
+    std::array<char, 1> buffer;
+    if (io->read(buffer.data(), 1) != 1) {
         qCritical() << "Error reading value";
         if (ok != nullptr)
             *ok = false;
@@ -151,16 +152,16 @@ QVariant readAmqpVariantBool(QIODevice *io, bool *ok)
 
 qmq::Decimal readAmqpDecimal(QIODevice *io, bool *ok)
 {
-    char buffer[5];
-    if (io->read(buffer, 5) != 5) {
+    std::array<char, 5> buffer;
+    if (io->read(buffer.data(), buffer.size()) != buffer.size()) {
         qCritical() << "Error reading value";
         if (ok != nullptr) {
             *ok = false;
         }
         return qmq::Decimal();
     };
-    const quint8 scale = static_cast<quint8>(buffer[0]);
-    const qint32 value = qFromBigEndian<qint32>(buffer + 1);
+    const quint8 scale = static_cast<quint8>(buffer.at(0));
+    const qint32 value = qFromBigEndian<qint32>(buffer.data() + 1);
     if (ok != nullptr) {
         *ok = true;
     }
@@ -354,8 +355,9 @@ QVariantList readAmqpVariantFieldArray(QIODevice *io, bool *ok)
     }
     QByteArray packedData = io->read(len);
     if (packedData.size() != len) {
-        if (ok != nullptr)
+        if (ok != nullptr) {
             *ok = false;
+        }
         qWarning() << "Attempt to allocate failed" << len;
         return QVariantList();
     }
@@ -497,8 +499,9 @@ bool writeAmqpFieldTable(QIODevice *io, const QVariantHash &value)
     }
     const quint32 len = packedBuffer.size();
     const bool isOk = writeAmqp<quint32>(io, len);
-    if (!isOk)
+    if (!isOk) {
         return false;
+    }
 
     if (io->write(packedBuffer) != packedBuffer.size()) {
         return false;
@@ -838,14 +841,14 @@ std::unique_ptr<qmq::Frame> qmq::Frame::readFrame(QIODevice *io,
     }
 
     const int headerLen = FrameHeaderSize;
-    char header[headerLen];
-    if (io->peek(header, headerLen) != headerLen) {
+    std::array<char, headerLen> header;
+    if (io->peek(header.data(), headerLen) != headerLen) {
         qWarning() << "peek failed";
         return std::unique_ptr<qmq::Frame>();
     }
     const FrameType t = static_cast<FrameType>(header[0]);
-    const quint16 channel = qFromBigEndian<quint16>(static_cast<const char *>(header) + 1);
-    const quint32 size = qFromBigEndian<quint32>(static_cast<const char *>(header) + 3);
+    const quint16 channel = qFromBigEndian<quint16>(header.data() + 1);
+    const quint32 size = qFromBigEndian<quint32>(header.data() + 3);
 
     if (maxFrameSize != 0 && size > maxFrameSize) {
         *err = ErrorCode::FrameTooLarge;
@@ -928,7 +931,7 @@ bool qmq::Frame::writeFrame(QIODevice *io, quint32 maxFrameSize, const Frame &f)
 std::unique_ptr<qmq::BodyFrame> qmq::BodyFrame::fromContent(quint16 channel,
                                                             const QByteArray &content)
 {
-    return std::unique_ptr<qmq::BodyFrame>(new BodyFrame(channel, content));
+    return std::make_unique<qmq::BodyFrame>(channel, content);
 }
 std::unique_ptr<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
                                                                 const QByteArray &content)
@@ -939,7 +942,7 @@ std::unique_ptr<qmq::MethodFrame> qmq::MethodFrame::fromContent(quint16 channel,
     const quint16 classId = readAmqp<quint16>(&io, &isOk);
     const quint16 methodId = readAmqp<quint16>(&io, &isOk);
     const QByteArray arguments = content.mid(4);
-    return std::unique_ptr<qmq::MethodFrame>(new MethodFrame(channel, classId, methodId, arguments));
+    return std::make_unique<qmq::MethodFrame>(channel, classId, methodId, arguments);
 }
 
 QByteArray qmq::MethodFrame::content() const
@@ -1025,8 +1028,7 @@ std::unique_ptr<qmq::HeaderFrame> qmq::HeaderFrame::fromContent(quint16 channel,
         }
     }
 
-    return std::unique_ptr<qmq::HeaderFrame>(
-        new HeaderFrame(channel, classId, contentSize, properties));
+    return std::make_unique<qmq::HeaderFrame>(channel, classId, contentSize, properties);
 }
 
 QByteArray qmq::HeaderFrame::content() const
@@ -1084,5 +1086,5 @@ std::unique_ptr<qmq::HeartbeatFrame> qmq::HeartbeatFrame::fromContent(quint16 ch
     if (!content.isEmpty()) {
         qWarning() << "Hearbeat frame has unexpected content, which has been discarded";
     }
-    return std::unique_ptr<qmq::HeartbeatFrame>(new HeartbeatFrame());
+    return std::make_unique<qmq::HeartbeatFrame>();
 }

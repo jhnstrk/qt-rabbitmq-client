@@ -12,6 +12,7 @@ set(QMQ_SOURCES_CPP
   consumer.cpp
   decimal.cpp
   frame.cpp
+  message.cpp
   qtrabbitmq.cpp
   spec_constants.cpp
 )
