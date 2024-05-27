@@ -1,6 +1,7 @@
 # Editor and IDE settings
 .vscode/
 .project
+.cache/
 
 *.swp
 

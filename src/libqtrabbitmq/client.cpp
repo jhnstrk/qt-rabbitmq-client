@@ -40,6 +40,7 @@ public:
     quint16 nextChannelId = 1;
     quint16 maxChannelId = 2047;
     quint16 heartbeatSeconds = 60;
+    ConnectionState state = ConnectionState::Closed;
 };
 
 Client::Client(QObject *parent)
@@ -112,6 +113,10 @@ void Client::setHeartbeatSeconds(quint16 n)
 
 bool Client::connectToHost(const QUrl &url)
 {
+    if (d->connection->state() != ConnectionState::Closed) {
+        qWarning() << "Connecting while not in Closed state";
+        this->disconnectFromHost();
+    }
     d->connection->setTuneParameters(d->maxChannelId, d->maxFrameSizeBytes, d->heartbeatSeconds);
 
     bool useSsl = false;
@@ -152,6 +157,7 @@ bool Client::connectToHost(const QUrl &url)
     connect(d->socket, &QAbstractSocket::stateChanged, this, &Client::onSocketStateChanged);
     connect(d->socket, &QSslSocket::sslErrors, this, &Client::onSocketSslErrors);
 
+    d->state = ConnectionState::Opening;
     if (useSsl) {
         d->socket->connectToHostEncrypted(url.host(), port);
     } else {
@@ -204,7 +210,7 @@ void Client::onSocketReadyRead()
     switch (frame->type()) {
     case FrameType::Method: {
         qDebug() << "Method frame on channel" << frame->channel();
-        const MethodFrame &methodFr = static_cast<const MethodFrame &>(*frame.get());
+        const MethodFrame &methodFr = static_cast<const MethodFrame &>(*frame);
         isHandled = handler->handleMethodFrame(methodFr);
     } break;
     case FrameType::Header:

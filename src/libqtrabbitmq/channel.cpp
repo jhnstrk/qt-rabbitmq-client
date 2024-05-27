@@ -98,6 +98,10 @@ namespace qmq {
 class Channel::Private
 {
 public:
+    Private(Channel *_q)
+        : q(_q)
+    {}
+
     MessageItemPtr popFirstMessageItem(qint16 classId, qint16 methodId)
     {
         for (auto it = inFlightMessages.begin(); it != inFlightMessages.end(); ++it) {
@@ -110,15 +114,26 @@ public:
         qWarning() << "No message found for classID" << classId << methodId;
         return {};
     }
+
+    void changeState(Channel::ChannelState newState)
+    {
+        if (newState != state) {
+            this->state = newState;
+            emit q->channelStateChanged(newState);
+        }
+    }
+    // Private class member variables
+    Channel *const q;
     quint16 channelId = 0;
     Client *client = nullptr;
     QList<MessageItemPtr> inFlightMessages;
     QScopedPointer<IncomingMessage> deliveringMessage;
     QHash<QString, QPointer<Consumer>> consumers;
+    Channel::ChannelState state = Channel::ChannelState::Closed;
 };
 
 Channel::Channel(Client *client, quint16 channelId)
-    : d(new Private)
+    : d(new Private(this))
 {
     d->channelId = channelId;
     d->client = client;
@@ -285,6 +300,8 @@ QFuture<void> Channel::channelOpen()
     const QVariantList args({reserved1});
     qDebug() << "Set open channel method" << d->channelId << "frame args" << args;
     frame.setArguments(args);
+    d->changeState(ChannelState::Opening);
+
     bool isOk = d->client->sendFrame(frame);
     if (!isOk) {
         messageTracker->setException(qmq::Exception(1, "Failed to send frame"));
@@ -305,6 +322,7 @@ bool Channel::onChannelOpenOk(const MethodFrame &frame)
     if (messageTracker) {
         messageTracker->finish();
     }
+    d->changeState(ChannelState::Open);
     return true;
 }
 
@@ -369,12 +387,15 @@ QFuture<void> Channel::channelClose(quint16 code,
                              QVariant::fromValue(classId),
                              QVariant::fromValue(methodId)});
     MethodFrame frame(d->channelId, spec::channel::ID_, spec::channel::Close);
+
+    d->changeState(ChannelState::Closing);
     qDebug() << "Set channel.close frame args" << args;
     frame.setArguments(args);
     messageTracker->promise.start();
     if (!d->client->sendFrame(frame)) {
         messageTracker->setException(qmq::Exception(1, "Failed to send close frame"));
         messageTracker->finish();
+        d->changeState(ChannelState::Closed);
     } else {
         d->inFlightMessages.push_back(messageTracker);
     }
@@ -389,6 +410,7 @@ bool Channel::onChannelCloseOk(const MethodFrame &frame)
     if (messageTracker) {
         messageTracker->finish();
     }
+    d->changeState(ChannelState::Closed);
     this->emptyMessageTracking(500, "Channel closed");
     return true;
 }
@@ -400,7 +422,7 @@ bool Channel::onChannelClose(const MethodFrame &frame)
     const QVariantList args = frame.getArguments();
     const quint16 code = args.at(0).value<quint16>();
     const QString replyText = args.at(1).toString();
-    const quint16 classId = args.at(2).toUInt();
+    const quint16 classId = args.at(2).value<quint16>();
     const quint16 methodId = args.at(3).value<quint16>();
     qDebug() << "Code:" << code << "replyText:" << replyText << "class, method: (" << classId << ","
              << methodId << ")";
@@ -981,7 +1003,7 @@ bool Channel::basicPublish(const qmq::Message &message, PublishOptions opts)
     }
 
     // d->inFlightMessages.push_back(messageTracker);
-    const QByteArray payload = message.payload();
+    const QByteArray &payload = message.payload();
     HeaderFrame header(d->channelId, frame.classId(), payload.size(), message.properties());
     isOk = d->client->sendFrame(header);
     if (!isOk) {
@@ -1381,9 +1403,9 @@ void Channel::incomingMessageComplete()
         auto consumerIt = d->consumers.find(consumerTag);
         if (consumerIt == d->consumers.end()) {
             qWarning() << "No consumer found for message";
+        } else {
+            consumerIt.value()->pushMessage(msg);
         }
-
-        consumerIt.value()->pushMessage(msg);
     }
 }
 

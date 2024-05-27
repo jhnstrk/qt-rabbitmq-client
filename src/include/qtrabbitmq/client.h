@@ -19,6 +19,14 @@ public:
     Client(QObject *parent = nullptr);
     ~Client();
 
+    enum class ConnectionState {
+        Closed,
+        Opening,
+        Open,
+        Closing,
+    };
+    ConnectionState state() const;
+
     QUrl connectionUrl() const;
     bool connectToHost(const QUrl &url);
 

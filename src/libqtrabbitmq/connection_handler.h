@@ -1,6 +1,7 @@
 #pragma once
 
 #include "qtrabbitmq/abstract_frame_handler.h"
+#include "qtrabbitmq/client.h"
 
 #include <QDateTime>
 #include <QObject>
@@ -8,14 +9,16 @@
 #include <qglobal.h>
 
 namespace qmq {
-class Client;
-
 namespace detail {
 class ConnectionHandler : public QObject, public AbstractFrameHandler
 {
     Q_OBJECT
 public:
     ConnectionHandler(Client *client);
+    ~ConnectionHandler() override = default;
+
+    Client::ConnectionState state() const { return m_state; }
+
     bool handleMethodFrame(const MethodFrame &frame) override;
     bool handleHeaderFrame(const HeaderFrame &) override { return false; }
     bool handleBodyFrame(const BodyFrame &) override { return false; }
@@ -57,6 +60,8 @@ private:
     quint32 m_maxFrameSizeBytes = 131072;
     quint16 m_heartbeatSeconds = 60;
     QDateTime m_lastheartbeatReceived;
+    Client::ConnectionState m_state = Client::ConnectionState::Closed;
+
     struct CloseArgs
     {
         quint16 code = 0;
@@ -66,6 +71,8 @@ private:
         bool isServerInitiated = false;
     };
     CloseArgs m_closeReason;
+
+    Q_DISABLE_COPY(ConnectionHandler)
 };
 
 } // namespace detail

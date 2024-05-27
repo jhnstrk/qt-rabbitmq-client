@@ -1,7 +1,9 @@
+#include <qsignalspy.h>
 #include <qtrabbitmq/client.h>
 #include <qtrabbitmq/decimal.h>
 
 #include <QDebug>
+#include <QFutureWatcher>
 #include <QHash>
 #include <QObject>
 #include <QRandomGenerator>
@@ -17,7 +19,13 @@ const QString ceBinary("binary");
 template<class T>
 bool waitForFuture(const QFuture<T> &fut, int waitTimeMs = smallWaitMs)
 {
-    return QTest::qWaitFor([&]() -> bool { return fut.isFinished(); }, waitTimeMs);
+    QFutureWatcher<T> watcher;
+    watcher.setFuture(fut);
+    QSignalSpy spy(&watcher, &QFutureWatcher<T>::finished);
+    return spy.wait(waitTimeMs);
+
+    // I think this is less efficient (busy-wait):
+    // return QTest::qWaitFor([&]() -> bool { return fut.isFinished(); }, waitTimeMs);
 }
 
 QString testMessage(const QString start = "Message")

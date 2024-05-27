@@ -67,6 +67,8 @@ public:
     // Types defined by Rabbit: https://www.rabbitmq.com/tutorials/amqp-concepts.html
     enum class ExchangeType { Invalid, Direct, Fanout, Topic, Match, Headers = Match };
 
+    enum class FlowState { FlowOn, FlowOff };
+
     explicit Channel(Client *client, quint16 channelId);
     virtual ~Channel();
 
@@ -195,6 +197,11 @@ protected:
     void incomingMessageComplete();
 
     void emptyMessageTracking(int code, const QString &message);
+
+    enum class ChannelState { Closed, Opening, Open, Closing };
+Q_SIGNALS:
+    void channelStateChanged(ChannelState state);
+
 public Q_SLOTS:
 
 protected Q_SLOTS:

@@ -46,6 +46,7 @@ bool ConnectionHandler::handleMethodFrame(const MethodFrame &frame)
 bool ConnectionHandler::handleHeartbeatFrame(const HeartbeatFrame &)
 {
     qDebug() << "Received heartbeat";
+    this->m_lastheartbeatReceived = QDateTime::currentDateTimeUtc();
     return true;
 }
 
