@@ -76,7 +76,7 @@ bool ConnectionHandler::sendStartOk()
     const QString locale = "en_US";
     const QVariantList args({clientProperties, mechanism, response, locale});
     MethodFrame frame(channel0, spec::connection::ID_, spec::connection::StartOk);
-    qDebug() << "Set startOk method frame args" << args;
+    qDebug() << "Sending startOk method frame";
     frame.setArguments(args);
     return m_client->sendFrame(frame);
 }

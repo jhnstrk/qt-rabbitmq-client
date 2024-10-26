@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16...3.22)
 set(QMQ_VERSION "0.1.0")
 set(QMQ_SOVERSION ${QMQ_VERSION})
 
-project(qtrabbitmq
+project(QtRabbitmq
   VERSION ${QMQ_VERSION}
   DESCRIPTION "Qt RabbitMQ AMQP client library"
   LANGUAGES CXX)
@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_TESTING "Build test suite" ON)
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+option(BUILD_EXAMPLES "Build example code" ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network)
 
@@ -21,7 +23,7 @@ include(GNUInstallDirs)
 # Compile options
 if(MSVC)
   add_compile_options(/W4 /WX)
-else()
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   # Ref: https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++ 
   add_compile_options(-Wall -Wextra -Wpedantic 
     -Wformat -Wformat=2 -Wconversion -Wimplicit-fallthrough 
@@ -38,8 +40,13 @@ else()
   )
 endif()
 
+set(QTRABBITMQ_ADD_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/include")
 add_subdirectory(src)
 
 if (BUILD_TESTING)
   add_subdirectory(test)
+endif()
+
+if (BUILD_EXAMPLES)
+  add_subdirectory(examples)
 endif()

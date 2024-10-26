@@ -11,8 +11,10 @@
 #include <QSslError>
 #include <QString>
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
-class Client : public QObject
+class QTRABBITMQ_EXPORT Client : public QObject
 {
     Q_OBJECT
 public:

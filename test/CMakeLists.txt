@@ -1,8 +1,12 @@
 find_package(Qt6 REQUIRED COMPONENTS Test)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories("../src/include")
-include_directories("../src/libqtrabbitmq")
+include_directories(
+  "../src/include"
+  "../src/libqtrabbitmq"
+  "${QTRABBITMQ_ADD_INCLUDE_DIR}"
+  )
+
 
 set(CMAKE_AUTOMOC ON)
 

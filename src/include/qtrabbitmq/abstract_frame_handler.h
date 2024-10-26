@@ -4,9 +4,11 @@
 
 #include <qtrabbitmq/frame.h>
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
 
-class AbstractFrameHandler
+class QTRABBITMQ_EXPORT AbstractFrameHandler
 {
 public:
     virtual ~AbstractFrameHandler() {}

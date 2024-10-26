@@ -8,6 +8,7 @@
 #include "consumer.h"
 #include "message.h"
 
+#include "qtrabbitmq_export.h"
 namespace qmq {
 class Client;
 
@@ -60,7 +61,7 @@ enum class ConsumeOption {
 };
 Q_DECLARE_FLAGS(ConsumeOptions, ConsumeOption)
 
-class Channel : public QObject, public AbstractFrameHandler
+class QTRABBITMQ_EXPORT Channel : public QObject, public AbstractFrameHandler
 {
     Q_OBJECT
 public:

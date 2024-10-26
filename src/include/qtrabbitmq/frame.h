@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
 
 enum class ErrorCode {
@@ -21,7 +23,7 @@ enum class ErrorCode {
     InvalidFrameData,
 };
 
-class Frame
+class QTRABBITMQ_EXPORT Frame
 {
 public:
     virtual ~Frame() {}
@@ -66,7 +68,7 @@ private:
     static const quint8 FrameEndChar = 0xCE;
 };
 
-class MethodFrame : public Frame
+class QTRABBITMQ_EXPORT MethodFrame : public Frame
 {
 public:
     static std::unique_ptr<MethodFrame> fromContent(quint16 channel, const QByteArray &content);
@@ -95,7 +97,7 @@ private:
     QByteArray m_arguments;
 };
 
-class HeaderFrame : public Frame
+class QTRABBITMQ_EXPORT HeaderFrame : public Frame
 {
 public:
     HeaderFrame(quint16 channel,
@@ -121,7 +123,7 @@ private:
     QHash<qmq::BasicProperty, QVariant> m_properties;
 };
 
-class BodyFrame : public Frame
+class QTRABBITMQ_EXPORT BodyFrame : public Frame
 {
 public:
     BodyFrame(quint16 channel, const QByteArray &body)
@@ -140,7 +142,7 @@ private:
     QByteArray m_body;
 };
 
-class HeartbeatFrame : public Frame
+class QTRABBITMQ_EXPORT HeartbeatFrame : public Frame
 {
 public:
     HeartbeatFrame()

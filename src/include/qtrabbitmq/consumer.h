@@ -7,15 +7,17 @@
 #include "message.h"
 #include "qtrabbitmq.h"
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
 class Channel;
 
-class Consumer : public QObject
+class QTRABBITMQ_EXPORT Consumer : public QObject
 {
     Q_OBJECT
 public:
     Consumer(const QString &consumerTag = QString(), QObject *parent = nullptr);
-    virtual ~Consumer();
+    ~Consumer() override;
 
     QString consumerTag() const;
 

@@ -1,3 +1,4 @@
+#include <qglobal.h>
 #include <qtrabbitmq/channel.h>
 #include <qtrabbitmq/client.h>
 
@@ -148,6 +149,13 @@ bool Client::connectToHost(const QUrl &url)
     d->userName = url.userName();
     d->password = url.password();
 
+    if (d->userName.isEmpty()) {
+        d->userName = qEnvironmentVariable("RABBITMQ_USER");
+    }
+    if (d->password.isEmpty()) {
+        d->password = qEnvironmentVariable("RABBITMQ_PASS");
+    }
+
     d->socket = new QSslSocket(this);
     d->socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
     d->socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
@@ -290,6 +298,19 @@ void Client::onSocketStateChanged(QAbstractSocket::SocketState state)
 {
 #warning(TODO)
     qDebug() << "onSocketStateChanged" << state;
+    if (state == QAbstractSocket::SocketState::UnconnectedState) {
+        if (d->state == ConnectionState::Closing) {
+        } else {
+            qWarning() << "Socket closed unexpectedly";
+        }
+        const ConnectionState oldState = d->state;
+        if (d->state != ConnectionState::Closed) {
+            d->state = ConnectionState::Closed;
+            if (oldState == ConnectionState::Open) {
+                Q_EMIT this->disconnected();
+            }
+        }
+    }
 }
 
 void Client::onSocketErrorOccurred(QAbstractSocket::SocketError error)

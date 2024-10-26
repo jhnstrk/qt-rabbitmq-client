@@ -3,8 +3,10 @@
 #include <QByteArray>
 #include <QStringList>
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
-class Authenticator
+class QTRABBITMQ_EXPORT Authenticator
 {
 public:
     virtual ~Authenticator() {}
@@ -13,7 +15,7 @@ public:
     virtual QByteArray responseBytes(const QByteArray &challenge) const = 0;
 };
 
-class AmqpPlainAuthenticator : public Authenticator
+class QTRABBITMQ_EXPORT AmqpPlainAuthenticator : public Authenticator
 {
 public:
     AmqpPlainAuthenticator();
@@ -31,7 +33,7 @@ private:
     QByteArray m_password;
 };
 
-class SaslPlainAuthenticator : public Authenticator
+class QTRABBITMQ_EXPORT SaslPlainAuthenticator : public Authenticator
 {
 public:
     SaslPlainAuthenticator();

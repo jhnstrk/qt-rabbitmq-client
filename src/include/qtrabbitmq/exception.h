@@ -2,9 +2,11 @@
 
 #include <QException>
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
 
-class Exception : public QException
+class QTRABBITMQ_EXPORT Exception : public QException
 {
 public:
     Exception(int code, const QString &message) noexcept

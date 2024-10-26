@@ -2,6 +2,8 @@
 
 #include <QByteArray>
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
 
 enum class FieldValue : char {
@@ -48,5 +50,5 @@ enum class BasicProperty {
     _ClusterId = 13,     // shortstr reserved, must be empty
 };
 
-QByteArray basicPropertyName(BasicProperty p);
+QTRABBITMQ_EXPORT QByteArray basicPropertyName(BasicProperty p);
 } // namespace qmq

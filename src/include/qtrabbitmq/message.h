@@ -7,17 +7,19 @@
 
 #include "qtrabbitmq.h"
 
+#include "qtrabbitmq_export.h"
+
 namespace qmq {
 
 using BasicPropertyHash = QHash<BasicProperty, QVariant>;
-class Message
+class QTRABBITMQ_EXPORT Message
 {
 public:
     Message() = default;
     Message(const QByteArray &payload,
             const QString &exchangeName,
-            const QString &routingKey,
-            const BasicPropertyHash &properties)
+            const QString &routingKey = {},
+            const BasicPropertyHash &properties = {})
         : m_payload(payload)
         , m_exchangeName(exchangeName)
         , m_routingKey(routingKey)
@@ -70,7 +72,7 @@ private:
 
 } // namespace qmq
 
-QDebug operator<<(QDebug debug, const qmq::Message &message);
-bool operator==(const qmq::Message &lhs, const qmq::Message &rhs);
+QTRABBITMQ_EXPORT QDebug operator<<(QDebug debug, const qmq::Message &message);
+QTRABBITMQ_EXPORT bool operator==(const qmq::Message &lhs, const qmq::Message &rhs);
 
 Q_DECLARE_METATYPE(qmq::Message);

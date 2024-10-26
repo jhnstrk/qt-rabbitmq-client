@@ -6,4 +6,5 @@
 *.swp
 
 /build/
+/install/
 CMakeLists.txt.user
